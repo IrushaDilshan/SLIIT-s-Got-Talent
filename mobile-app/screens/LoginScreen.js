@@ -15,33 +15,62 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import api from '../api';
 
 const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState(1); // 1: Email, 2: OTP
   const { login } = useAuth();
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email) {
-      Alert.alert('Required', 'Please enter your email address');
-      return;
-    }
+    if (step === 1) {
+      if (!email) {
+        Alert.alert('Required', 'Please enter your email address');
+        return;
+      }
+      // Basic check for SLIIT email format
+      const sliitEmailRegex = /@(my\.)?sliit\.lk$/;
+      if (!sliitEmailRegex.test(email)) {
+        Alert.alert('Invalid Domain', 'Please use your official @sliit.lk or @my.sliit.lk email');
+        return;
+      }
 
-    if (!email.endsWith('@sliit.lk')) {
-      Alert.alert('Invalid Domain', 'Please use your official @sliit.lk email');
-      return;
-    }
+      setLoading(true);
+      try {
+        await api.post('/auth/login', { email });
+        setLoading(false);
+        setStep(2);
+        Alert.alert('OTP Sent', 'Check your email for the verification code.');
+      } catch (error) {
+        setLoading(false);
+        const msg = error.response?.data?.message || 'Something went wrong';
+        Alert.alert('Error', msg);
+      }
+    } else {
+      // Verify OTP step
+      if (!otp) {
+        Alert.alert('Required', 'Please enter the OTP');
+        return;
+      }
 
-    setLoading(true);
-    // Simulate API call delay for effect
-    setTimeout(() => {
-      setLoading(false);
-      // Dummy login implementation for the demo
-      login('dummy-token', { email, name: 'Student', isVoted: false });
-    }, 1500);
+      setLoading(true);
+      try {
+        const res = await api.post('/auth/verify', { email, otp });
+        setLoading(false);
+        if (res.data.success) {
+          login(res.data.token, res.data.user);
+        }
+      } catch (error) {
+        setLoading(false);
+        const msg = error.response?.data?.message || 'Invalid OTP';
+        Alert.alert('Error', msg);
+      }
+    }
   };
 
   return (
@@ -65,29 +94,50 @@ export default function LoginScreen({ navigation }) {
         >
           <View style={styles.content}>
             <View style={styles.headerContainer}>
-              <Text style={styles.welcomeText}>Welcome</Text>
-              <Text style={styles.subText}>Sign in to SLIIT's Got Talent</Text>
+              <Text style={styles.welcomeText}>{step === 1 ? 'Welcome' : 'Verify OTP'}</Text>
+              <Text style={styles.subText}>{step === 1 ? "Sign in to SLIIT's Got Talent" : `Enter code sent to ${email}`}</Text>
             </View>
 
             <View style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>ACADEMIC EMAIL</Text>
-                <View style={[styles.inputWrapper, focused && styles.inputWrapperFocused]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="itxxxxxxxx@my.sliit.lk"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    selectionColor="#e94560"
-                    editable={!loading}
-                  />
+              {step === 1 ? (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>ACADEMIC EMAIL</Text>
+                  <View style={[styles.inputWrapper, focused && styles.inputWrapperFocused]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="itxxxxxxxx@my.sliit.lk"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                      selectionColor="#e94560"
+                      editable={!loading}
+                    />
+                  </View>
                 </View>
-              </View>
+              ) : (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>VERIFICATION CODE</Text>
+                  <View style={[styles.inputWrapper, focused && styles.inputWrapperFocused]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="123456"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                      selectionColor="#e94560"
+                      editable={!loading}
+                    />
+                  </View>
+                </View>
+              )}
 
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -102,10 +152,20 @@ export default function LoginScreen({ navigation }) {
                   style={styles.loginButton}
                 >
                   <Text style={styles.loginButtonText}>
-                    {loading ? 'VERIFYING...' : 'CONTINUE'}
+                    {loading ? 'PROCESSING...' : (step === 1 ? 'SEND OTP' : 'VERIFY & LOGIN')}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
+              
+              {step === 2 && (
+                 <TouchableOpacity 
+                   onPress={() => setStep(1)}
+                   style={{ marginTop: 20, alignSelf: 'center' }}
+                   disabled={loading}
+                 >
+                   <Text style={{ color: '#e94560', fontSize: 14 }}>Change Email</Text>
+                 </TouchableOpacity>
+              )}
             </View>
 
             <TouchableOpacity

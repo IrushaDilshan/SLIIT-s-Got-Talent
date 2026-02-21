@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    match: /@sliit\.lk$/, // Ensure SLIIT email
+    match: /@(my\.)?sliit\.lk$/, // Ensure SLIIT email
   },
   role: {
     type: String,
