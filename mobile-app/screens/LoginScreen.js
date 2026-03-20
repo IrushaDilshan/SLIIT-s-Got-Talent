@@ -48,7 +48,8 @@ export default function LoginScreen({ navigation }) {
         Alert.alert('OTP Sent', 'Check your email for the verification code.');
       } catch (error) {
         setLoading(false);
-        const msg = error.response?.data?.message || 'Something went wrong';
+        console.log('LOGIN ERROR (send OTP):', error.message, error.response?.data);
+        const msg = error.response?.data?.message || error.message || 'Something went wrong';
         Alert.alert('Error', msg);
       }
     } else {
@@ -67,7 +68,8 @@ export default function LoginScreen({ navigation }) {
         }
       } catch (error) {
         setLoading(false);
-        const msg = error.response?.data?.message || 'Invalid OTP';
+        console.log('LOGIN ERROR (verify OTP):', error.message, error.response?.data);
+        const msg = error.response?.data?.message || error.message || 'Invalid OTP';
         Alert.alert('Error', msg);
       }
     }
