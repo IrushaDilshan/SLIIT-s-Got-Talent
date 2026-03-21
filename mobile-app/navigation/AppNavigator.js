@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import VotingScreen from '../screens/VotingScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import LeaderboardScreen from '../screens/LeaderboardScreen';
 
 import { View, Text, ActivityIndicator } from 'react-native';
 
@@ -31,7 +32,10 @@ export default function AppNavigator() {
             <Stack.Screen name="Login" component={LoginScreen} />
           </>
         ) : (
-          <Stack.Screen name="Voting" component={VotingScreen} />
+          <>
+            <Stack.Screen name="Voting" component={VotingScreen} />
+            <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
