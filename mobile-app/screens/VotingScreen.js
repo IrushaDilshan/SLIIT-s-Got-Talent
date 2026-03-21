@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import { contestantsAPI, votesAPI, timerAPI } from '../api';
 import { LinearGradient } from 'expo-linear-gradient';
+import BottomNavBar from '../components/BottomNavBar';
 
 const { width } = Dimensions.get('window');
 
@@ -28,9 +29,10 @@ const DUMMY_CONTESTANTS = [
 
 const CATEGORIES = ['All', 'Singing', 'Dancing', 'Music', 'Magic'];
 
-export default function VotingScreen() {
-    const { user, logout, hasVoted, updateUserVoteStatus } = useAuth();
+export default function VotingScreen({ navigation }) {
+    const { hasVoted, updateUserVoteStatus } = useAuth();
     const [contestants, setContestants] = useState([]);
+    const [isDummyData, setIsDummyData] = useState(false);
     const [eventStatus, setEventStatus] = useState('upcoming');
     const [timeLeft, setTimeLeft] = useState(0); // in seconds
     const [loading, setLoading] = useState(true);
@@ -57,8 +59,10 @@ export default function VotingScreen() {
             // If API returns empty, use dummy data for demo purposes
             if (contestantsRes.data && contestantsRes.data.length > 0) {
                 setContestants(contestantsRes.data);
+                setIsDummyData(false);
             } else {
                 setContestants(DUMMY_CONTESTANTS);
+                setIsDummyData(true);
             }
 
             setEventStatus(statusRes.data.status);
@@ -68,6 +72,7 @@ export default function VotingScreen() {
         } catch (error) {
             // Fallback to dummy data on error
             setContestants(DUMMY_CONTESTANTS);
+            setIsDummyData(true);
             setTimeLeft(86400 * 2); // 2 days default
         } finally {
             setLoading(false);
@@ -102,13 +107,18 @@ export default function VotingScreen() {
                     onPress: async () => {
                         try {
                             setVotingLoading(true);
-                            // Simulate vote API
-                            await new Promise(r => setTimeout(r, 1000));
-                            // await votesAPI.castVote(contestantId);
+                            if (isDummyData) {
+                                // Demo mode: no real backend vote
+                                await new Promise(r => setTimeout(r, 800));
+                            } else {
+                                await votesAPI.castVote(contestantId);
+                            }
                             await updateUserVoteStatus();
                             Alert.alert('Success', 'Your vote has been cast!');
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to cast vote');
+                            console.error('Vote error:', error?.response?.data || error.message);
+                            const message = error?.response?.data?.message || 'Failed to cast vote';
+                            Alert.alert('Error', message);
                         } finally {
                             setVotingLoading(false);
                         }
@@ -181,9 +191,6 @@ export default function VotingScreen() {
             >
                 <View style={styles.headerTop}>
                     <Text style={styles.headerTitle}>Live Voting</Text>
-                    <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                        <Text style={styles.logoutText}>Log Out</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Counter Section */}
@@ -234,6 +241,8 @@ export default function VotingScreen() {
                     }
                 />
             )}
+
+            <BottomNavBar navigation={navigation} currentScreen="Voting" />
         </View>
     );
 }
@@ -260,14 +269,6 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: '800',
         color: '#fff',
-    },
-    logoutBtn: {
-        padding: 5,
-    },
-    logoutText: {
-        color: '#a0a0a0',
-        fontSize: 14,
-        fontWeight: '600',
     },
     counterContainer: {
         alignItems: 'center',
