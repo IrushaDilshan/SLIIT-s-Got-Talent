@@ -26,16 +26,10 @@ exports.castVote = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (user.isVoted) {
-            return res.status(400).json({ message: 'You have already cast your vote' });
-        }
-
-        // Validate contestantId format before querying
         if (!mongoose.Types.ObjectId.isValid(contestantId)) {
             return res.status(400).json({ message: 'Invalid contestant ID' });
         }
 
-        // Ensure contestant exists and is approved
         const contestant = await Contestant.findById(contestantId);
         if (!contestant) {
             return res.status(404).json({ message: 'Contestant not found' });
@@ -45,29 +39,26 @@ exports.castVote = async (req, res) => {
             return res.status(400).json({ message: 'You can only vote for approved contestants' });
         }
 
-        // Optional extra safety: ensure no existing vote by this user
-        const existingVote = await Vote.findOne({ voterId: userId });
-        if (existingVote) {
-            user.isVoted = true;
-            await user.save();
-            return res.status(400).json({ message: 'You have already cast your vote' });
+        const category = contestant.talentType;
+
+        if (!user.votedCategories) user.votedCategories = [];
+
+        if (user.votedCategories.includes(category)) {
+            return res.status(400).json({ message: "You have already voted in the  category" });
         }
 
-        // Create vote record
         const vote = await Vote.create({
             voterId: userId,
             contestantId,
         });
 
-        // Increment contestant vote count atomically
         const updatedContestant = await Contestant.findByIdAndUpdate(
             contestantId,
             { $inc: { votes: 1 } },
             { new: true }
         );
 
-        // Mark user as having voted
-        user.isVoted = true;
+        user.votedCategories.push(category);
         await user.save();
 
         return res.status(201).json({
@@ -80,6 +71,10 @@ exports.castVote = async (req, res) => {
                     name: updatedContestant.name,
                     votes: updatedContestant.votes,
                 },
+                user: {
+                    isVoted: user.isVoted,
+                    votedCategories: user.votedCategories || []
+                }
             },
         });
     } catch (error) {
@@ -106,3 +101,5 @@ exports.getVoteStats = async (req, res) => {
         return res.status(500).json({ message: 'Server error while fetching vote stats' });
     }
 };
+
+
