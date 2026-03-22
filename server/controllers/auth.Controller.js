@@ -33,7 +33,13 @@ exports.loginUser = async (req, res) => {
     }
 
     // Generate specific 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    let otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // DEV: Default OTP for admin
+    if (email === 'admin@sliit.lk') {
+      otp = '123456';
+    }
+
     const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.otp = otp;
@@ -104,7 +110,7 @@ exports.verifyOTP = async (req, res) => {
         _id: user._id,
         email: user.email,
         role: user.role,
-        isVoted: user.isVoted,
+        isVoted: user.isVoted, votedCategories: user.votedCategories || [],
       },
     });
   } catch (error) {
@@ -112,3 +118,4 @@ exports.verifyOTP = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+

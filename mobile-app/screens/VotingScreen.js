@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
-import { contestantsAPI, votesAPI, timerAPI } from '../api';
+import { contestantsAPI, votesAPI, settingsAPI } from '../api';
 import { LinearGradient } from 'expo-linear-gradient';
+import BottomNavBar from '../components/BottomNavBar';
 
 const { width } = Dimensions.get('window');
 
@@ -28,15 +29,17 @@ const DUMMY_CONTESTANTS = [
 
 const CATEGORIES = ['All', 'Singing', 'Dancing', 'Music', 'Magic'];
 
-export default function VotingScreen() {
-    const { user, logout, hasVoted, updateUserVoteStatus } = useAuth();
+export default function VotingScreen({ navigation }) {
+    const { hasVoted, updateUserVoteStatus } = useAuth();
     const [contestants, setContestants] = useState([]);
+    const [isDummyData, setIsDummyData] = useState(false);
     const [eventStatus, setEventStatus] = useState('upcoming');
     const [timeLeft, setTimeLeft] = useState(0); // in seconds
     const [loading, setLoading] = useState(true);
     const [votingLoading, setVotingLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [categories, setCategories] = useState(['All']);
 
     useEffect(() => {
         fetchData();
@@ -46,29 +49,38 @@ export default function VotingScreen() {
         return () => clearInterval(interval);
     }, []);
 
-    const fetchData = async () => {
+        const fetchData = async () => {
         try {
             setLoading(true);
-            const [contestantsRes, statusRes] = await Promise.all([
+            const [conRes, setRes] = await Promise.all([
                 contestantsAPI.getAll(),
-                timerAPI.getEventStatus()
+                settingsAPI.getSettings()
             ]);
-
-            // If API returns empty, use dummy data for demo purposes
-            if (contestantsRes.data && contestantsRes.data.length > 0) {
-                setContestants(contestantsRes.data);
+            if (conRes.data && conRes.data.length > 0) {
+                setContestants(conRes.data);
+                setIsDummyData(false);
             } else {
-                setContestants(DUMMY_CONTESTANTS);
+                setContestants([]);
             }
-
-            setEventStatus(statusRes.data.status);
-            // Mock time left if 0 for demo
-            setTimeLeft(statusRes.data.timeLeft || 86400 * 2 + 3600 * 5); // 2 days 5 hours
-
-        } catch (error) {
-            // Fallback to dummy data on error
-            setContestants(DUMMY_CONTESTANTS);
-            setTimeLeft(86400 * 2); // 2 days default
+            if (setRes.data && setRes.data.categories) {
+                setCategories(['All', ...setRes.data.categories]);
+            } else {
+                setCategories(['All', 'Singing', 'Dancing', 'Other']);
+            }
+            if (setRes.data && setRes.data.countdownEnd) {
+                const endT = new Date(setRes.data.countdownEnd).getTime();
+                const now = new Date().getTime();
+                const diff = Math.max(0, Math.floor((endT - now) / 1000));
+                setTimeLeft(diff);
+                setEventStatus(diff > 0 ? 'active' : 'ended');
+            } else {
+                setTimeLeft(0);
+                setEventStatus('upcoming');
+            }
+        } catch (e) {
+            console.log(e);
+            setContestants([]);
+            setTimeLeft(0);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -102,13 +114,18 @@ export default function VotingScreen() {
                     onPress: async () => {
                         try {
                             setVotingLoading(true);
-                            // Simulate vote API
-                            await new Promise(r => setTimeout(r, 1000));
-                            // await votesAPI.castVote(contestantId);
+                            if (isDummyData) {
+                                // Demo mode: no real backend vote
+                                await new Promise(r => setTimeout(r, 800));
+                            } else {
+                                await votesAPI.castVote(contestantId);
+                            }
                             await updateUserVoteStatus();
                             Alert.alert('Success', 'Your vote has been cast!');
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to cast vote');
+                            console.error('Vote error:', error?.response?.data || error.message);
+                            const message = error?.response?.data?.message || 'Failed to cast vote';
+                            Alert.alert('Error', message);
                         } finally {
                             setVotingLoading(false);
                         }
@@ -131,7 +148,7 @@ export default function VotingScreen() {
 
     const filteredContestants = selectedCategory === 'All'
         ? contestants
-        : contestants.filter(c => c.category === selectedCategory || c.talent.includes(selectedCategory));
+        : contestants.filter(c => c.talentType === selectedCategory || (c.talentType || '').includes(selectedCategory));
 
     const renderContestant = ({ item }) => (
         <View style={styles.card}>
@@ -147,12 +164,12 @@ export default function VotingScreen() {
 
             <View style={styles.cardContent}>
                 <View style={styles.cardHeader}>
-                    <Text style={styles.categoryTag}>{item.category || 'Talent'}</Text>
+                    <Text style={styles.categoryTag}>{item.talentType || 'Talent'}</Text>
                     {hasVoted && <Text style={styles.votedTag}>VOTED</Text>}
                 </View>
 
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.talent}>{item.talent}</Text>
+                <Text style={styles.talent}>{item.description}</Text>
 
                 <TouchableOpacity
                     style={[
@@ -181,9 +198,6 @@ export default function VotingScreen() {
             >
                 <View style={styles.headerTop}>
                     <Text style={styles.headerTitle}>Live Voting</Text>
-                    <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                        <Text style={styles.logoutText}>Log Out</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Counter Section */}
@@ -196,7 +210,7 @@ export default function VotingScreen() {
             {/* Category Filter */}
             <View style={styles.categoryContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-                    {CATEGORIES.map((cat) => (
+                    {categories.map((cat) => (
                         <TouchableOpacity
                             key={cat}
                             style={[
@@ -234,6 +248,8 @@ export default function VotingScreen() {
                     }
                 />
             )}
+
+            <BottomNavBar navigation={navigation} currentScreen="Voting" />
         </View>
     );
 }
@@ -260,14 +276,6 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: '800',
         color: '#fff',
-    },
-    logoutBtn: {
-        padding: 5,
-    },
-    logoutText: {
-        color: '#a0a0a0',
-        fontSize: 14,
-        fontWeight: '600',
     },
     counterContainer: {
         alignItems: 'center',
@@ -406,3 +414,6 @@ const styles = StyleSheet.create({
         marginTop: 50,
     }
 });
+
+
+

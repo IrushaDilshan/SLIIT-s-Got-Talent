@@ -43,4 +43,8 @@ export const timerAPI = {
   getEventStatus: () => api.get('/timer/event-status'),
 };
 
+export const settingsAPI = {
+  getSettings: () => api.get('/settings'),
+};
+
 export default api;
