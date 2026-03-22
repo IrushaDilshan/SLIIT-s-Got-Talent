@@ -110,7 +110,7 @@ exports.verifyOTP = async (req, res) => {
         _id: user._id,
         email: user.email,
         role: user.role,
-        isVoted: user.isVoted,
+        isVoted: user.isVoted, votedCategories: user.votedCategories || [],
       },
     });
   } catch (error) {
@@ -118,3 +118,4 @@ exports.verifyOTP = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
