@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  SectionList,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
@@ -47,6 +48,19 @@ export default function LeaderboardScreen({ navigation }) {
   const onRefresh = () => {
     setRefreshing(true);
     fetchStats();
+  };
+
+  const getSections = () => {
+    const map = {};
+    contestants.forEach(c => {
+      const type = c.talentType || 'Other';
+      if (!map[type]) map[type] = [];
+      map[type].push(c);
+    });
+    return Object.keys(map).map(category => ({
+      title: category,
+      data: map[category].sort((a, b) => b.votes - a.votes)
+    })).sort((a, b) => a.title.localeCompare(b.title));
   };
 
   const renderItem = ({ item, index }) => (
@@ -112,10 +126,15 @@ export default function LeaderboardScreen({ navigation }) {
           <ActivityIndicator size="large" color="#e94560" />
         </View>
       ) : (
-        <FlatList
-          data={contestants}
+        <SectionList
+          sections={getSections()}
           keyExtractor={(item) => item._id}
           renderItem={renderItem}
+          renderSectionHeader={({ section: { title } }) => (
+            <View style={styles.sectionHeaderContainer}>
+              <Text style={styles.sectionHeaderText}>{title}</Text>
+            </View>
+          )}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -247,9 +266,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  sectionHeaderContainer: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  sectionHeaderText: {
+    color: '#e94560',
+    fontSize: 16,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   emptyText: {
     color: '#b2bec3',
     textAlign: 'center',
     marginTop: 40,
   },
 });
+
+
+
