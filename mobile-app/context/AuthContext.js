@@ -81,6 +81,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         hasVoted: user?.isVoted || false,
         votedCategories: user?.votedCategories || [],
+        votedContestants: user?.votedContestants || [],
       }}
     >
       {children}
