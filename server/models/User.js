@@ -12,9 +12,9 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'manager', 'admin'],
     default: 'student',
   },
-  isVoted: {
-    type: Boolean,
-    default: false,
+  votedCategories: {
+    type: [String],
+    default: [],
   },
   otp: {
     type: String,
@@ -25,3 +25,4 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
+

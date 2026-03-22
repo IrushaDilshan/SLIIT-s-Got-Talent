@@ -30,7 +30,7 @@ const DUMMY_CONTESTANTS = [
 const CATEGORIES = ['All', 'Singing', 'Dancing', 'Music', 'Magic'];
 
 export default function VotingScreen({ navigation }) {
-    const { hasVoted, updateUserVoteStatus } = useAuth();
+    const { votedCategories, updateUserVoteStatus } = useAuth();
     const [contestants, setContestants] = useState([]);
     const [isDummyData, setIsDummyData] = useState(false);
     const [eventStatus, setEventStatus] = useState('upcoming');
@@ -92,15 +92,15 @@ export default function VotingScreen({ navigation }) {
         fetchData();
     };
 
-    const handleVote = async (contestantId, contestantName) => {
+    const handleVote = async (contestantId, contestantName, contestantCategory) => {
         // Allow voting in dummy mode or if active
         // if (eventStatus !== 'active') {
         //     Alert.alert('Voting Closed', 'Voting is not currently active.');
         //     return;
         // }
 
-        if (hasVoted) {
-            Alert.alert('Already Voted', 'You have already cast your vote.');
+        if (votedCategories.includes(contestantCategory)) {
+            Alert.alert('Already Voted', `You have already voted in the ${contestantCategory} category.`);
             return;
         }
 
@@ -117,10 +117,15 @@ export default function VotingScreen({ navigation }) {
                             if (isDummyData) {
                                 // Demo mode: no real backend vote
                                 await new Promise(r => setTimeout(r, 800));
+                                await updateUserVoteStatus({ votedCategories: [...votedCategories, contestantCategory] });
                             } else {
-                                await votesAPI.castVote(contestantId);
+                                const res = await votesAPI.castVote(contestantId);
+                                if (res.data && res.data.data && res.data.data.user) {
+                                    await updateUserVoteStatus(res.data.data.user);
+                                } else {
+                                    await updateUserVoteStatus({ votedCategories: [...votedCategories, contestantCategory] });
+                                }
                             }
-                            await updateUserVoteStatus();
                             Alert.alert('Success', 'Your vote has been cast!');
                         } catch (error) {
                             console.error('Vote error:', error?.response?.data || error.message);
@@ -150,7 +155,9 @@ export default function VotingScreen({ navigation }) {
         ? contestants
         : contestants.filter(c => c.talentType === selectedCategory || (c.talentType || '').includes(selectedCategory));
 
-    const renderContestant = ({ item }) => (
+    const renderContestant = ({ item }) => {
+        const isVoted = votedCategories.includes(item.talentType);
+        return (
         <View style={styles.card}>
             <Image
                 source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
@@ -165,7 +172,7 @@ export default function VotingScreen({ navigation }) {
             <View style={styles.cardContent}>
                 <View style={styles.cardHeader}>
                     <Text style={styles.categoryTag}>{item.talentType || 'Talent'}</Text>
-                    {hasVoted && <Text style={styles.votedTag}>VOTED</Text>}
+                    {isVoted && <Text style={styles.votedTag}>VOTED</Text>}
                 </View>
 
                 <Text style={styles.name}>{item.name}</Text>
@@ -174,18 +181,18 @@ export default function VotingScreen({ navigation }) {
                 <TouchableOpacity
                     style={[
                         styles.voteButton,
-                        hasVoted && styles.voteButtonDisabled
+                        isVoted && styles.voteButtonDisabled
                     ]}
-                    onPress={() => handleVote(item._id, item.name)}
-                    disabled={hasVoted}
+                    onPress={() => handleVote(item._id, item.name, item.talentType)}
+                    disabled={isVoted || votingLoading}
                 >
                     <Text style={styles.voteButtonText}>
-                        {hasVoted ? 'Voted' : 'Vote Now'}
+                        {isVoted ? 'Voted' : 'Vote Now'}
                     </Text>
                 </TouchableOpacity>
             </View>
         </View>
-    );
+    )};
 
     return (
         <View style={styles.container}>
@@ -414,6 +421,10 @@ const styles = StyleSheet.create({
         marginTop: 50,
     }
 });
+
+
+
+
 
 
 
