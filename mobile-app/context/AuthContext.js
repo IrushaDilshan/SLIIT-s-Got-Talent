@@ -59,9 +59,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUserVoteStatus = async () => {
+  const updateUserVoteStatus = async (userUpdates) => {
     try {
-      const updatedUser = { ...user, isVoted: true };
+      const updatedUser = { ...user, ...userUpdates };
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
       setUser(updatedUser);
     } catch (error) {
@@ -80,9 +80,13 @@ export const AuthProvider = ({ children }) => {
         updateUserVoteStatus,
         isAuthenticated: !!user,
         hasVoted: user?.isVoted || false,
+        votedCategories: user?.votedCategories || [],
+        votedContestants: user?.votedContestants || [],
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
+
+

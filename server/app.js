@@ -11,6 +11,7 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth.Routes'));
 app.use('/api/contestants', require('./routes/contestant.Routes'));
 app.use('/api/votes', require('./routes/vote.Routes'));
+app.use('/api/settings', require('./routes/settings.Routes'));
 
 // Basic route
 app.get('/', (req, res) => {
