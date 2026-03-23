@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function HomePage() {
@@ -10,157 +10,274 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const accentColor = '#FC5A6D';
+
   return (
-    <div style={{ backgroundColor: 'var(--bg-dark)', color: 'var(--text-main)', minHeight: '100vh', fontFamily: "'Sora', sans-serif", overflowX: 'hidden' }}>
+    <div style={{ backgroundColor: '#0e0d12', color: '#ffffff', minHeight: '100vh', fontFamily: "'Inter', 'Sora', sans-serif", overflowX: 'hidden' }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
         .glass-nav {
-          background: ${isScrolled ? 'rgba(15, 15, 19, 0.85)' : 'transparent'};
+          background: ${isScrolled ? 'rgba(14, 13, 18, 0.95)' : 'transparent'};
           backdrop-filter: ${isScrolled ? 'blur(16px)' : 'none'};
-          -webkit-backdrop-filter: ${isScrolled ? 'blur(16px)' : 'none'};
           border-bottom: ${isScrolled ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid transparent'};
           transition: all 0.4s ease;
         }
-        .hero-gradient {
-          background: radial-gradient(circle at 50% 20%, rgba(233, 69, 96, 0.15) 0%, transparent 60%),
-                      radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.3) 0%, transparent 50%),
-                      url('https://images.unsplash.com/photo-1540039155732-684735035727?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
-          position: relative;
+
+        .nav-btn-outline {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #fff;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.85rem;
+          padding: 10px 20px;
+          border-radius: 6px;
+          text-decoration: none;
+          transition: all 0.3s ease;
         }
-        .hero-gradient::before {
+        .nav-btn-outline:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .primary-btn {
+          background: #FD5D73;
+          color: #fff;
+          border: none;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.85rem;
+          padding: 10px 20px;
+          border-radius: 6px;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.3s ease;
+        }
+        .primary-btn:hover {
+          background: #FA4B64;
+          transform: translateY(-1px);
+        }
+
+        .hero-title {
+          font-family: 'Inter', sans-serif;
+          font-size: clamp(3rem, 7vw, 6rem);
+          font-weight: 900;
+          line-height: 1.1;
+          letter-spacing: -2px;
+          margin: 0;
+          text-transform: uppercase;
+        }
+        
+        .hero-title .accent {
+          color: #FD5D73;
+        }
+
+        .hero-subtitle {
+          color: #94a3b8;
+          font-size: clamp(1rem, 1.3vw, 1.1rem);
+          line-height: 1.6;
+          max-width: 650px;
+          margin: 0 auto;
+          font-weight: 400;
+          font-family: 'Inter', sans-serif;
+        }
+
+        .action-btn-main {
+          background: #FD5D73;
+          color: #fff;
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: 1rem;
+          padding: 14px 32px;
+          border-radius: 8px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          border: 1px solid transparent;
+        }
+        .action-btn-main:hover {
+          background: #FA4B64;
+          transform: translateY(-2px);
+          box-shadow: 0 10px 20px rgba(253, 93, 115, 0.2);
+        }
+
+        .action-btn-secondary {
+          background: rgba(30, 30, 35, 0.4);
+          border: 1px solid rgba(255,255,255,0.06);
+          color: #E2E8F0;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 0.95rem;
+          padding: 14px 32px;
+          border-radius: 8px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+        }
+        .action-btn-secondary:hover {
+          background: rgba(40, 40, 45, 0.8);
+          border-color: rgba(255,255,255,0.15);
+          color: #fff;
+        }
+
+        .stats-bar-container {
+          position: relative;
+          background: #111015;
+          border-radius: 12px;
+          padding: 1px;
+          width: 100%;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        .stats-bar-container::before {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(to bottom, rgba(15,15,19,0.7) 0%, rgba(15,15,19,0.95) 80%, var(--bg-dark) 100%);
-          z-index: 1;
+          border-radius: 12px;
+          padding: 1px;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, rgba(253, 93, 115, 0.4) 100%);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
         }
+
+        .stats-bar {
+          background: #15141A;
+          border-radius: 11px;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          padding: 24px 40px;
+          gap: 20px;
+        }
+
+        .stat-item {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex: 1;
+        }
+
+        .stat-divider {
+          width: 1px;
+          background: rgba(255,255,255,0.06);
+          margin: 0 10px;
+        }
+        
+        .icon-box {
+          width: 44px;
+          height: 44px;
+          border-radius: 8px;
+          background: rgba(253, 93, 115, 0.04);
+          border: 1px solid rgba(253, 93, 115, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #FD5D73;
+        }
+        
         .feature-card {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          border-radius: 20px;
+          background: #15141A;
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 16px;
           padding: 40px;
-          transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
-          backdrop-filter: blur(10px);
+          transition: transform 0.4s ease, border-color 0.4s ease;
         }
         .feature-card:hover {
-          transform: translateY(-10px);
-          box-shadow: 0 15px 40px rgba(233, 69, 96, 0.15);
-          border-color: rgba(233, 69, 96, 0.4);
-        }
-        .stat-number {
-          background: var(--gradient-1);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          font-weight: 800;
-        }
-        .hero-btn {
-          transition: all 0.3s ease;
-        }
-        .hero-btn:hover {
-          transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 10px 25px rgba(233, 69, 96, 0.4);
-        }
-        .nav-link {
-          transition: color 0.3s ease;
-          text-decoration: none;
-          color: var(--text-muted);
-          font-weight: 500;
-          font-size: 0.95rem;
-        }
-        .nav-link:hover {
-          color: #fff;
-        }
-        .glass-panel {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(20px);
-          border-radius: 16px;
+          transform: translateY(-8px);
+          border-color: rgba(253, 93, 115, 0.3);
         }
       `}</style>
 
       {/* Modern Fixed Navbar */}
-      <nav className="glass-nav" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '16px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+      <nav className="glass-nav" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '20px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <Link to="/" style={{ textDecoration: 'none' }}>
-            <h2 style={{ margin: 0, fontSize: '1.6rem', color: '#fff', fontWeight: '800', letterSpacing: '-0.5px' }}>
-              SLIIT <span style={{ color: 'var(--primary)' }}>TALENT</span>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff', fontWeight: '900', letterSpacing: '-0.5px', fontFamily: "'Inter', sans-serif" }}>
+              SLIIT <span style={{ color: '#FD5D73' }}>TALENT</span>
             </h2>
           </Link>
-          <div style={{ display: 'none', gap: '30px', '@media(minWidth: 768px)': { display: 'flex' } }} className="nav-links-container">
-            <a href="#about" className="nav-link">The Event</a>
-            <a href="#categories" className="nav-link">Categories</a>
-            <a href="#rules" className="nav-link">Guidelines</a>
-          </div>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <Link to="/login" style={{ padding: '10px 24px', borderRadius: '8px', color: '#fff', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', border: '1px solid rgba(255,255,255,0.1)' }} className="glass-panel">
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <Link to="/login" className="nav-btn-outline">
             Student Login
           </Link>
-          <Link to="/dashboard/vote" className="hero-btn" style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--gradient-1)', color: '#fff', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Live Voting
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <Link to="/dashboard/vote" className="primary-btn">
+            Live Voting 
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="hero-gradient" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '120px 5% 60px 5%', position: 'relative' }}>
-        <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', maxWidth: '900px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '160px 5% 80px 5%', position: 'relative' }}>
+        <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', width: '100%', maxWidth: '1000px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           
-          <div style={{ marginBottom: '24px', padding: '8px 20px', borderRadius: '30px', background: 'rgba(233, 69, 96, 0.1)', border: '1px solid rgba(233, 69, 96, 0.2)', color: 'var(--primary)', fontWeight: '700', fontSize: '0.85rem', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <div style={{ marginBottom: '32px', padding: '6px 20px', borderRadius: '30px', background: 'rgba(253, 93, 115, 0.08)', border: '1px solid rgba(253, 93, 115, 0.2)', color: '#FD5D73', fontWeight: '700', fontSize: '0.75rem', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>
             10th Anniversary Edition • Live Show
           </div>
 
-          <h1 style={{ fontSize: 'clamp(3.5rem, 8vw, 5.5rem)', fontWeight: '800', lineHeight: '1.1', marginBottom: '24px', letterSpacing: '-2px' }}>
-            THE STAGE IS <span className="stat-number">SET.</span><br/>
-            THE TALENT IS <span className="stat-number">REAL.</span>
+          <h1 className="hero-title" style={{ marginBottom: '24px' }}>
+            THE STAGE IS <span className="accent">SET.</span><br/>
+            THE TALENT IS <span className="accent">REAL.</span>
           </h1>
 
-          <p style={{ fontSize: 'clamp(1.1rem, 2vw, 1.3rem)', color: 'var(--text-muted)', marginBottom: '40px', maxWidth: '700px', lineHeight: '1.6', fontFamily: "'Manrope', sans-serif" }}>
-            Experience the most anticipated event of the year. Join us as the brightest undergraduates from across all faculties showcase mind-blowing performances.
+          <p className="hero-subtitle" style={{ marginBottom: '48px' }}>
+            Experience the most anticipated event of the year. Join us as the
+            brightest undergraduates from across all faculties showcase mind-
+            blowing performances.
           </p>
 
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '60px' }}>
-            <Link to="/dashboard/vote" className="hero-btn" style={{ padding: '16px 40px', background: 'var(--gradient-1)', borderRadius: '12px', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', textDecoration: 'none' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '80px' }}>
+            <Link to="/dashboard/vote" className="action-btn-main">
               Vote For Your Favorite
             </Link>
-            <a href="#about" className="glass-panel" style={{ padding: '16px 40px', borderRadius: '12px', color: '#fff', fontSize: '1.1rem', fontWeight: '600', textDecoration: 'none', transition: 'all 0.3s' }}>
+            <Link to="/register" className="action-btn-secondary">
+              Register Talent
+            </Link>
+            <a href="#about" className="action-btn-secondary">
               Discover The Event
             </a>
           </div>
 
           {/* Event Details Floating Bar */}
-          <div className="glass-panel" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', padding: '30px', gap: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', borderBottom: '2px solid var(--primary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(233, 69, 96, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          <div className="stats-bar-container">
+            <div className="stats-bar">
+              <div className="stat-item">
+                <div className="icon-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</p>
+                  <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#fff' }}>Sept 27, 2024</p>
+                </div>
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Date</p>
-                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Sept 27, 2024</p>
-              </div>
-            </div>
 
-            <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+              <div className="stat-divider" />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(233, 69, 96, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <div className="stat-item">
+                <div className="icon-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Venue</p>
+                  <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#fff' }}>Nelum Pokuna</p>
+                </div>
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Venue</p>
-                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Nelum Pokuna</p>
-              </div>
-            </div>
 
-            <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+              <div className="stat-divider" />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(233, 69, 96, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Attendees</p>
-                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>2,500+ Live</p>
+              <div className="stat-item">
+                <div className="icon-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Attendees</p>
+                  <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#fff' }}>2,500+ Live</p>
+                </div>
               </div>
             </div>
           </div>
@@ -240,6 +357,7 @@ export default function HomePage() {
               <h4 style={{ color: '#fff', marginBottom: '20px', fontWeight: '600' }}>Quick Links</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <a href="#about" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}>About Event</a>
+                <Link to="/register" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}>Contestant Registration</Link>
                 <Link to="/login" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}>Student Login</Link>
                 <Link to="/dashboard/vote" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}>Voting Dashboard</Link>
               </div>
