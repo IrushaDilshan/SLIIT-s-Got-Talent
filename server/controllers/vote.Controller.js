@@ -58,7 +58,9 @@ exports.castVote = async (req, res) => {
             { new: true }
         );
 
+        if (!user.votedContestants) user.votedContestants = [];
         user.votedCategories.push(category);
+        user.votedContestants.push(contestantId);
         await user.save();
 
         return res.status(201).json({
@@ -73,7 +75,8 @@ exports.castVote = async (req, res) => {
                 },
                 user: {
                     isVoted: user.isVoted,
-                    votedCategories: user.votedCategories || []
+                    votedCategories: user.votedCategories || [],
+                    votedContestants: user.votedContestants || [],
                 }
             },
         });

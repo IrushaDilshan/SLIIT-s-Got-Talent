@@ -27,10 +27,8 @@ const DUMMY_CONTESTANTS = [
     { _id: '4', name: 'Kasun Kalhara', talent: 'Magician', category: 'Magic', description: 'Mind-bending illusions.', imageUrl: 'https://images.unsplash.com/photo-1556648710-857504ba428d?w=800' },
 ];
 
-const CATEGORIES = ['All', 'Singing', 'Dancing', 'Music', 'Magic'];
-
 export default function VotingScreen({ navigation }) {
-    const { votedCategories, updateUserVoteStatus } = useAuth();
+    const { votedCategories, votedContestants, updateUserVoteStatus } = useAuth();
     const [contestants, setContestants] = useState([]);
     const [isDummyData, setIsDummyData] = useState(false);
     const [eventStatus, setEventStatus] = useState('upcoming');
@@ -49,7 +47,7 @@ export default function VotingScreen({ navigation }) {
         return () => clearInterval(interval);
     }, []);
 
-        const fetchData = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
             const [conRes, setRes] = await Promise.all([
@@ -93,12 +91,6 @@ export default function VotingScreen({ navigation }) {
     };
 
     const handleVote = async (contestantId, contestantName, contestantCategory) => {
-        // Allow voting in dummy mode or if active
-        // if (eventStatus !== 'active') {
-        //     Alert.alert('Voting Closed', 'Voting is not currently active.');
-        //     return;
-        // }
-
         if (votedCategories.includes(contestantCategory)) {
             Alert.alert('Already Voted', `You have already voted in the ${contestantCategory} category.`);
             return;
@@ -115,15 +107,20 @@ export default function VotingScreen({ navigation }) {
                         try {
                             setVotingLoading(true);
                             if (isDummyData) {
-                                // Demo mode: no real backend vote
                                 await new Promise(r => setTimeout(r, 800));
-                                await updateUserVoteStatus({ votedCategories: [...votedCategories, contestantCategory] });
+                                await updateUserVoteStatus({ 
+                                    votedCategories: [...votedCategories, contestantCategory],
+                                    votedContestants: [...(votedContestants || []), contestantId] 
+                                });
                             } else {
                                 const res = await votesAPI.castVote(contestantId);
                                 if (res.data && res.data.data && res.data.data.user) {
                                     await updateUserVoteStatus(res.data.data.user);
                                 } else {
-                                    await updateUserVoteStatus({ votedCategories: [...votedCategories, contestantCategory] });
+                                    await updateUserVoteStatus({ 
+                                        votedCategories: [...votedCategories, contestantCategory],
+                                        votedContestants: [...(votedContestants || []), contestantId] 
+                                    });
                                 }
                             }
                             Alert.alert('Success', 'Your vote has been cast!');
@@ -140,14 +137,14 @@ export default function VotingScreen({ navigation }) {
         );
     };
 
-    // Format seconds into HH:MM:SS (or Days + HH:MM:SS)
     const formatTime = (seconds) => {
+        if (seconds <= 0) return "00:00:00";
         const d = Math.floor(seconds / (3600 * 24));
         const h = Math.floor((seconds % (3600 * 24)) / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = Math.floor(seconds % 60);
 
-        if (d > 0) return `${d}d ${h}h ${m}m`;
+        if (d > 0) return `${d}d ${h}h ${m}m ${s}s`;
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
@@ -156,91 +153,119 @@ export default function VotingScreen({ navigation }) {
         : contestants.filter(c => c.talentType === selectedCategory || (c.talentType || '').includes(selectedCategory));
 
     const renderContestant = ({ item }) => {
-        const isVoted = votedCategories.includes(item.talentType);
+        const hasVotedInCategory = votedCategories.includes(item.talentType);
+        const hasVotedForThis = votedContestants.includes(item._id);
+
         return (
-        <View style={styles.card}>
-            <Image
-                source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
-                style={styles.cardImage}
-                resizeMode="cover"
-            />
-            <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.9)']}
-                style={styles.cardOverlay}
-            />
+            <View style={[styles.card, hasVotedForThis && styles.cardVoted]}>
+                <Image
+                    source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800' }}
+                    style={[styles.cardImage, hasVotedInCategory && !hasVotedForThis && { opacity: 0.3 }]}
+                    resizeMode="cover"
+                />
+                <LinearGradient
+                    colors={['transparent', 'rgba(5,5,10,0.8)', '#05050A']}
+                    style={styles.cardOverlay}
+                />
 
-            <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                    <Text style={styles.categoryTag}>{item.talentType || 'Talent'}</Text>
-                    {isVoted && <Text style={styles.votedTag}>VOTED</Text>}
-                </View>
+                <View style={styles.cardContent}>
+                    <View style={styles.cardHeader}>
+                        <View style={styles.tagContainer}>
+                            <Text style={styles.categoryTag}>{item.talentType || 'Talent'}</Text>
+                        </View>
+                        {hasVotedForThis && (
+                            <View style={styles.votedBadge}>
+                                <Text style={styles.votedBadgeText}>★ VOTED</Text>
+                            </View>
+                        )}
+                    </View>
 
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.talent}>{item.description}</Text>
-
-                <TouchableOpacity
-                    style={[
-                        styles.voteButton,
-                        isVoted && styles.voteButtonDisabled
-                    ]}
-                    onPress={() => handleVote(item._id, item.name, item.talentType)}
-                    disabled={isVoted || votingLoading}
-                >
-                    <Text style={styles.voteButtonText}>
-                        {isVoted ? 'Voted' : 'Vote Now'}
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.talent} numberOfLines={2}>
+                        {item.description || 'Contestant showcasing their amazing abilities and talent!'}
                     </Text>
-                </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => handleVote(item._id, item.name, item.talentType)}
+                        disabled={hasVotedInCategory || votingLoading}
+                        activeOpacity={0.8}
+                        style={styles.voteBtnContainer}
+                    >
+                        {hasVotedForThis ? (
+                            <View style={styles.voteButtonVoted}>
+                                <Text style={styles.voteButtonTextVoted}>✓ Voted</Text>
+                            </View>
+                        ) : hasVotedInCategory ? (
+                            <View style={styles.voteButtonDisabled}>
+                                <Text style={styles.voteButtonTextDisabled}>Category Voted</Text>
+                            </View>
+                        ) : (
+                            <LinearGradient
+                                colors={['#FF007A', '#FF7F00']}
+                                start={[0, 0]} end={[1, 0]}
+                                style={styles.voteButtonActive}
+                            >
+                                <Text style={styles.voteButtonTextActive}>Vote Now</Text>
+                            </LinearGradient>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
-        </View>
-    )};
+        );
+    };
 
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
 
-            {/* Header Section */}
             <LinearGradient
-                colors={['#1a1a2e', '#16213e']}
+                colors={['#0F0C29', '#302B63', '#24243E']}
                 style={styles.header}
+                start={[0, 0]}
+                end={[1, 1]}
             >
                 <View style={styles.headerTop}>
                     <Text style={styles.headerTitle}>Live Voting</Text>
+                    <View style={styles.liveBadge}>
+                         <View style={styles.liveDot} />
+                         <Text style={styles.liveText}>LIVE</Text>
+                    </View>
                 </View>
 
-                {/* Counter Section */}
                 <View style={styles.counterContainer}>
                     <Text style={styles.counterLabel}>VOTING ENDS IN</Text>
                     <Text style={styles.counterValue}>{formatTime(timeLeft)}</Text>
                 </View>
             </LinearGradient>
 
-            {/* Category Filter */}
             <View style={styles.categoryContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
                     {categories.map((cat) => (
                         <TouchableOpacity
                             key={cat}
-                            style={[
-                                styles.categoryChip,
-                                selectedCategory === cat && styles.categoryChipActive
-                            ]}
                             onPress={() => setSelectedCategory(cat)}
                         >
-                            <Text style={[
-                                styles.categoryText,
-                                selectedCategory === cat && styles.categoryTextActive
-                            ]}>
-                                {cat}
-                            </Text>
+                            {selectedCategory === cat ? (
+                                <LinearGradient
+                                    colors={['#FF007A', '#FF7F00']}
+                                    start={[0, 0]} end={[1, 0]}
+                                    style={styles.categoryChip}
+                                >
+                                    <Text style={styles.categoryTextActive}>{cat}</Text>
+                                </LinearGradient>
+                            ) : (
+                                <View style={[styles.categoryChip, styles.categoryChipInactive]}>
+                                    <Text style={styles.categoryText}>{cat}</Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
             </View>
 
-            {/* Content List */}
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#e94560" />
+                    <ActivityIndicator size="large" color="#FF007A" />
                 </View>
             ) : (
                 <FlatList
@@ -264,77 +289,112 @@ export default function VotingScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0f0f1a',
+        backgroundColor: '#05050A',
     },
     header: {
-        paddingTop: 60,
+        paddingTop: 50,
         paddingBottom: 20,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 15,
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: '800',
+        fontSize: 26,
+        fontWeight: '900',
         color: '#fff',
+        letterSpacing: 0.5,
+    },
+    liveBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 0, 50, 0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 0, 50, 0.5)',
+    },
+    liveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#FF2A55',
+        marginRight: 6,
+    },
+    liveText: {
+        color: '#FF2A55',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     counterContainer: {
         alignItems: 'center',
-        paddingVertical: 10,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 15,
+        paddingVertical: 12,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
     counterLabel: {
-        color: '#e94560', // Accent color
-        fontSize: 12,
-        fontWeight: 'bold',
+        color: '#FF007A',
+        fontSize: 10,
+        fontWeight: '900',
         letterSpacing: 2,
-        marginBottom: 5,
+        marginBottom: 4,
     },
     counterValue: {
         color: '#fff',
-        fontSize: 32,
-        fontWeight: 'bold',
+        fontSize: 26,
+        fontWeight: '900',
         fontVariant: ['tabular-nums'],
+        letterSpacing: 1,
     },
     categoryContainer: {
         marginVertical: 15,
     },
     categoryScroll: {
         paddingHorizontal: 20,
+        paddingBottom: 5,
     },
     categoryChip: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 18,
         paddingVertical: 10,
-        borderRadius: 25,
-        backgroundColor: '#1a1a2e',
+        borderRadius: 24,
         marginRight: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    categoryChipInactive: {
+        backgroundColor: '#12101A',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-    categoryChipActive: {
-        backgroundColor: '#e94560',
-        borderColor: '#e94560',
-    },
     categoryText: {
-        color: '#888',
-        fontWeight: '600',
+        color: '#8E8E9F',
+        fontWeight: '700',
+        fontSize: 12,
     },
     categoryTextActive: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '900',
+        fontSize: 12,
+        letterSpacing: 0.5,
     },
     listContent: {
-        padding: 20,
+        padding: 16,
         paddingTop: 0,
+        paddingBottom: 90, // For BottomNavBar
     },
     loadingContainer: {
         flex: 1,
@@ -342,85 +402,140 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     card: {
-        height: 250,
+        height: 240,
         borderRadius: 20,
-        marginBottom: 20,
+        marginBottom: 16,
         overflow: 'hidden',
-        position: 'relative',
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#12101A',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+    },
+    cardVoted: {
+        borderColor: 'rgba(46, 204, 113, 0.3)',
     },
     cardImage: {
         width: '100%',
         height: '100%',
+        opacity: 0.6,
     },
     cardOverlay: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: '100%',
+        height: '80%',
         justifyContent: 'flex-end',
-        padding: 20,
     },
     cardContent: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 20,
+        padding: 16,
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 5,
+        alignItems: 'center',
+        marginBottom: 4,
     },
-    categoryTag: {
-        color: '#e94560',
-        fontSize: 12,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    votedTag: {
-        backgroundColor: '#2ecc71',
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
+    tagContainer: {
+        backgroundColor: 'rgba(255, 0, 122, 0.15)',
         paddingHorizontal: 8,
         paddingVertical: 2,
-        borderRadius: 4,
-        overflow: 'hidden',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 0, 122, 0.3)',
+    },
+    categoryTag: {
+        color: '#FF007A',
+        fontSize: 9,
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    votedBadge: {
+        backgroundColor: 'rgba(46, 204, 113, 0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(46, 204, 113, 0.5)',
+    },
+    votedBadgeText: {
+        color: '#2ecc71',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     name: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 20,
+        fontWeight: '900',
         color: '#fff',
         marginBottom: 2,
+        letterSpacing: 0.5,
     },
     talent: {
-        fontSize: 16,
-        color: '#ccc',
-        marginBottom: 15,
+        fontSize: 12,
+        color: '#A0A0B0',
+        marginBottom: 12,
+        fontWeight: '500',
     },
-    voteButton: {
-        backgroundColor: '#fff',
-        paddingVertical: 12,
+    voteBtnContainer: {
+        width: '100%',
+    },
+    voteButtonActive: {
+        paddingVertical: 10,
         borderRadius: 12,
         alignItems: 'center',
     },
-    voteButtonDisabled: {
-        backgroundColor: 'rgba(255,255,255,0.5)',
+    voteButtonTextActive: {
+        color: '#fff',
+        fontWeight: '900',
+        fontSize: 14,
+        letterSpacing: 1,
     },
-    voteButtonText: {
-        color: '#000',
-        fontWeight: 'bold',
-        fontSize: 16,
+    voteButtonVoted: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingVertical: 10,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    voteButtonTextVoted: {
+        color: '#8E8E9F',
+        fontWeight: '800',
+        fontSize: 14,
+        letterSpacing: 1,
+    },
+    voteButtonDisabled: {
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        paddingVertical: 10,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    voteButtonTextDisabled: {
+        color: '#555',
+        fontWeight: '800',
+        fontSize: 14,
+        letterSpacing: 1,
     },
     emptyText: {
-        color: '#666',
+        color: '#8E8E9F',
         textAlign: 'center',
         marginTop: 50,
+        fontSize: 14,
     }
 });
+
 
 
 

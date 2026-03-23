@@ -110,7 +110,9 @@ exports.verifyOTP = async (req, res) => {
         _id: user._id,
         email: user.email,
         role: user.role,
-        isVoted: user.isVoted, votedCategories: user.votedCategories || [],
+        isVoted: user.isVoted,
+        votedCategories: user.votedCategories || [],
+        votedContestants: user.votedContestants || [],
       },
     });
   } catch (error) {
