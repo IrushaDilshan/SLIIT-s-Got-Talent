@@ -17,8 +17,9 @@ export default function VotePage() {
   const [error, setError] = useState('');
   const [contestants, setContestants] = useState([]);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
 
-  const hasVoted = Boolean(user?.isVoted);
+  const hasVotedAny = Boolean(user?.votedCategories?.length > 0 || user?.isVoted);
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
@@ -52,9 +53,28 @@ export default function VotePage() {
     navigate('/', { replace: true });
   }
 
+  const groupedData = useMemo(() => contestants.reduce((acc, current) => {
+    const category = current.talentType || 'Uncategorized';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(current);
+    return acc;
+  }, {}), [contestants]);
+
+  const categories = useMemo(() => ['All', ...Object.keys(groupedData).sort()], [groupedData]);
+  
+  const filteredContestants = useMemo(() => activeCategory === 'All' 
+    ? contestants 
+    : groupedData[activeCategory] || [], [activeCategory, contestants, groupedData]);
+
   const cards = useMemo(() => {
-    return contestants.map((c) => {
+    const votedCategories = user?.votedCategories || [];
+    const votedContestants = user?.votedContestants || [];
+
+    return filteredContestants.map((c) => {
       const thumb = youtubeThumb(c.videoUrl);
+      const isVotedForThisContestant = votedContestants.includes(c._id);
+      const hasVotedInCategory = votedCategories.includes(c.talentType);
+      
       return (
         <div key={c._id} className="premium-card">
           <div className="card-image-wrapper">
@@ -70,16 +90,20 @@ export default function VotePage() {
             <p className="card-desc">{c.description || 'No description provided.'}</p>
             <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
               <button
-                className={`vote-btn ${hasVoted ? 'voted' : ''}`}
-                disabled={hasVoted}
+                className={`vote-btn ${isVotedForThisContestant ? 'voted' : ''}`}
+                disabled={hasVotedInCategory}
                 onClick={async () => {
-                  if (hasVoted) return;
-                  if (!window.confirm('Confirm your vote? This cannot be undone.')) return;
+                  if (hasVotedInCategory) return;
+                  if (!window.confirm(`Confirm your vote for ${c.name} in ${c.talentType}? This cannot be undone.`)) return;
                   try {
                     const res = await api.post({ path: '/votes', token, body: { contestantId: c._id } });
                     if (res?.success) {
-                      updateUser({ isVoted: true });
-                      window.alert('Vote cast successfully!');
+                      updateUser({ 
+                        isVoted: true,
+                        votedCategories: [...votedCategories, c.talentType],
+                        votedContestants: [...votedContestants, c._id]
+                      });
+                      window.alert(`Vote cast successfully for ${c.name}!`);
                     } else {
                       window.alert(res?.message || 'Vote failed');
                     }
@@ -88,14 +112,18 @@ export default function VotePage() {
                   }
                 }}
               >
-                {hasVoted ? '✓ Voted' : `Vote for ${c.name?.split(' ')?.[0] || 'Contestant'}`}
+                {isVotedForThisContestant 
+                  ? '✓ Voted' 
+                  : hasVotedInCategory 
+                    ? 'Category Locked' 
+                    : `Vote for ${c.name?.split(' ')?.[0] || 'Contestant'}`}
               </button>
             </div>
           </div>
         </div>
       );
     });
-  }, [contestants, hasVoted, token, updateUser]);
+  }, [filteredContestants, user, token, updateUser]);
 
   return (
     <div style={{ backgroundColor: '#09090b', color: '#ffffff', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -222,6 +250,24 @@ export default function VotePage() {
         .vote-btn:disabled:not(.voted) {
           background: rgba(255,255,255,0.05); color: #64748B; cursor: not-allowed; box-shadow: none;
         }
+
+        /* Filter Tabs */
+        .filter-container {
+          display: flex; gap: 12px; padding-bottom: 30px; flex-wrap: wrap; justify-content: center;
+        }
+        .filter-tab {
+          display: flex; align-items: center; gap: 8px;
+          padding: 10px 24px; background: rgba(30, 41, 59, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 30px;
+          color: #94a3b8; font-size: 0.95rem; font-weight: 500; cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .filter-tab:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+        .filter-tab.active {
+          background: linear-gradient(135deg, #FD5D73 0%, #E11D48 100%);
+          color: #ffffff; border: 1px solid transparent;
+          box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+        }
       `}</style>
 
       {/* Modern Fixed Navbar */}
@@ -229,14 +275,15 @@ export default function VotePage() {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Link to="/" style={{ textDecoration: 'none' }}>
             <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff', fontWeight: '900', letterSpacing: '-0.5px' }}>
-              SLIIT <span style={{ color: '#FD5D73' }}>TALENT</span>
+              Votify <span style={{ color: '#FD5D73' }}>SLIIT</span>
             </h2>
           </Link>
         </div>
         
         <div className="nav-links">
           <Link to="/" className="nav-link">Home</Link>
-          <Link to="/vote" className="nav-link active">Live Voting</Link>
+          <Link to="/vote" className="nav-link active">Meet Contestants</Link>
+          <Link to="/rankings" className="nav-link">Live Results</Link>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <button onClick={handleLogout} className="btn-outline">Sign Out</button>
           </div>
@@ -248,10 +295,10 @@ export default function VotePage() {
         <h1 className="huge-title">THE ULTIMATE<br/><span>TALENT SHOWCASE</span></h1>
         <p className="hero-subtitle">You hold the power. Watch the performances, pick your absolute favorite, and crown the next superstar of SLIIT.</p>
         
-        {hasVoted && (
+        {hasVotedAny && (
           <div className="status-badge">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Your vital vote has been recorded!
+            Your votes have been securely recorded!
           </div>
         )}
       </div>
@@ -262,9 +309,23 @@ export default function VotePage() {
         ) : error ? (
           <div style={{ textAlign: 'center', padding: '60px', color: '#FD5D73', fontSize: '1.2rem', fontWeight: '600' }}>{error}</div>
         ) : (
-          <div className="contestant-grid">
-            {cards.length ? cards : <p style={{ color: '#94A3B8', textAlign: 'center', gridColumn: '1 / -1' }}>No contestants available for voting yet.</p>}
-          </div>
+          <>
+            <div className="filter-container">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`filter-tab ${activeCategory === cat ? 'active' : ''}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            
+            <div className="contestant-grid">
+              {cards.length ? cards : <p style={{ color: '#94A3B8', textAlign: 'center', gridColumn: '1 / -1' }}>No contestants found for this category.</p>}
+            </div>
+          </>
         )}
       </div>
     </div>
