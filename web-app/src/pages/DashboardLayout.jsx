@@ -20,9 +20,6 @@ export default function DashboardLayout() {
         <div className="sidebar-header">SLIIT's Got Talent</div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/dashboard/vote" className={linkClass}>
-            Vote
-          </NavLink>
           <NavLink to="/dashboard/rankings" className={linkClass}>
             Rankings
           </NavLink>
