@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  votedContestants: {
+    type: [String],
+    default: [],
+  },
   otp: {
     type: String,
   },
