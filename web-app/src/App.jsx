@@ -34,6 +34,15 @@ export default function App() {
         />
 
         <Route
+          path="/rankings"
+          element={
+            <RequireAuth>
+              <RankingsPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/dashboard"
           element={
             <RequireAuth>
@@ -41,8 +50,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="rankings" replace />} />
-          <Route path="rankings" element={<RankingsPage />} />
+          <Route index element={<Navigate to="manage" replace />} />
           <Route
             path="manage"
             element={
