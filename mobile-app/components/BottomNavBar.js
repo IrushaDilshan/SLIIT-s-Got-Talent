@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function BottomNavBar({ navigation, currentScreen }) {
   const go = (screen) => {
@@ -10,15 +11,27 @@ export default function BottomNavBar({ navigation, currentScreen }) {
 
   const Item = ({ label, icon, screen }) => {
     const isActive = currentScreen === screen;
+    
+    if (isActive) {
+      return (
+        <TouchableOpacity style={styles.item} onPress={() => go(screen)} activeOpacity={0.8}>
+          <LinearGradient
+            colors={['#FF007A', '#FF7F00']}
+            start={[0, 0]} end={[1, 0]}
+            style={styles.pillActive}
+          >
+            <Text style={styles.iconActive}>{icon}</Text>
+            <Text style={styles.labelActive}>{label}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      );
+    }
+
     return (
-      <TouchableOpacity
-        style={styles.item}
-        onPress={() => go(screen)}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.pill, isActive && styles.pillActive]}>
-          <Text style={[styles.icon, isActive && styles.iconActive]}>{icon}</Text>
-          <Text style={[styles.label, isActive && styles.labelActive]}>{label}</Text>
+      <TouchableOpacity style={styles.item} onPress={() => go(screen)} activeOpacity={0.8}>
+        <View style={styles.pill}>
+          <Text style={styles.icon}>{icon}</Text>
+          <Text style={styles.label}>{label}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -37,58 +50,83 @@ export default function BottomNavBar({ navigation, currentScreen }) {
 
 const styles = StyleSheet.create({
   outer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 6,
+    paddingBottom: 20,
+    paddingTop: 10,
     backgroundColor: 'transparent',
+    alignItems: 'center',
   },
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(15, 15, 26, 0.95)',
-    borderRadius: 28,
+    width: '100%',
+    backgroundColor: '#12101A',
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 20,
   },
   item: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     borderRadius: 20,
-    backgroundColor: 'transparent',
   },
   pillActive: {
-    backgroundColor: 'rgba(233, 69, 96, 0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 24,
+    shadowColor: '#FF007A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
   },
   icon: {
-    color: '#636e72',
-    fontSize: 16,
+    color: '#8E8E9F',
+    fontSize: 18,
     marginRight: 4,
+    fontWeight: '400',
+    marginTop: -2,
   },
   iconActive: {
-    color: '#e94560',
+    color: '#fff',
+    fontSize: 18,
+    marginRight: 4,
+    fontWeight: '800',
+    marginTop: -2,
   },
   label: {
-    color: '#b2bec3',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+    color: '#8E8E9F',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   labelActive: {
     color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 });
