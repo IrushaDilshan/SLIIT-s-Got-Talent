@@ -54,7 +54,9 @@ export function CountdownTimer() {
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { user } = useAuth();
-  const userName = user?.email ? user.email.split('@')[0] : 'Student';
+  // Filter out the word 'admin' from the greeting to avoid confusion on the public page
+  const rawPrefix = user?.email ? user.email.split('@')[0] : 'Student';
+  const userName = rawPrefix.toLowerCase() === 'admin' ? 'SLIIT Voter' : rawPrefix;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -137,7 +139,7 @@ export default function HomePage() {
           display: flex; justify-content: space-between; align-items: center;
           box-shadow: 0 20px 40px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 30px;
         }
-        .greeting-title { font-size: 1.8rem; font-weight: 700; color: #111827; margin: 0 0 8px 0; }
+        .greeting-title { font-size: 1.8rem; font-weight: 700; color: #111827; margin: 0 0 8px 0; display: flex; alignItems: center; gap: 8px; }
         .greeting-sub { font-size: 1.1rem; color: #6b7280; margin: 0; font-weight: 400; }
 
         .vote-action-area { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
@@ -194,11 +196,15 @@ export default function HomePage() {
       <div className="card-container">
         <div className="action-card">
           <div>
-            <h2 className="greeting-title">Hello {userName} 👋</h2>
+            <h2 className="greeting-title">Hello {userName} <span style={{fontSize: '1.4rem'}}>👋</span></h2>
             <p className="greeting-sub">It's time to make your voice heard.</p>
           </div>
           <div className="vote-action-area">
-            <Link to="/vote" className="blue-vote-btn">
+            <Link 
+              to={user ? "/vote" : "/login"} 
+              state={{ from: { pathname: '/vote' } }} 
+              className="blue-vote-btn"
+            >
               Cast Your Vote Now
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </Link>
@@ -213,8 +219,94 @@ export default function HomePage() {
       <div className="nominees-section">
         <h2 className="section-title">Meet the Performers</h2>
         <p className="section-sub">Get to know the contestant profiles & make an informed decision.</p>
+
+        {/* Features / Categories Grid */}
+        <div style={{ maxWidth: '1200px', margin: '40px auto 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', textAlign: 'left' }}>
+          
+          <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.1)', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', marginBottom: '20px' }}>
+              🎤
+            </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>Vocal Powerhouses</h3>
+            <p style={{ color: '#6B7280', lineHeight: '1.6', margin: 0 }}>From emotional acoustics to powerful ballads. Discover the journey of soloists and bands competing to become SLIIT's most acclaimed vocalists.</p>
+          </div>
+
+          <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', marginBottom: '20px' }}>
+              💃
+            </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>Exquisite Choreography</h3>
+            <p style={{ color: '#6B7280', lineHeight: '1.6', margin: 0 }}>Watch crews battle it out. Expect high-energy routines, stunning costumes, and perfect synchronization on the main stage.</p>
+          </div>
+
+          <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', marginBottom: '20px' }}>
+              🎭
+            </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '12px', color: '#111827' }}>Variety & Magic</h3>
+            <p style={{ color: '#6B7280', lineHeight: '1.6', margin: 0 }}>Prepare to be amazed by mind-bending magic tricks, unique instrumental performances, and breathtaking variety acts.</p>
+          </div>
+
+        </div>
+
+        <Link to="/vote" style={{ display: 'inline-block', marginTop: '60px', color: '#2563EB', fontWeight: '600', textDecoration: 'none', borderBottom: '2px solid #2563EB', paddingBottom: '4px' }}>
+          Explore all contestants →
+        </Link>
       </div>
 
+      {/* About Section */}
+      <section style={{ padding: '80px 5%', background: '#fff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '60px' }}>
+          <div style={{ flex: '1 1 400px' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 20px 0', color: '#111827', letterSpacing: '-1px' }}>
+              What is SLIIT's Got Talent?
+            </h2>
+            <p style={{ fontSize: '1.1rem', color: '#4b5563', lineHeight: '1.8', marginBottom: '24px' }}>
+              Organized by the Faculty of Engineering Students’ Community, <strong>SLIIT’s Got Talent</strong> brings together faculties, staff, and directors for an unforgettable night of music, dance, and sheer entertainment.
+            </p>
+            <p style={{ fontSize: '1.1rem', color: '#4b5563', lineHeight: '1.8', marginBottom: '32px' }}>
+              It is the most anticipated event of the year where the brightest undergraduates from across all faculties showcase their mind-blowing performances. You—the audience—have the ultimate power to crown the <strong>People's Choice Award</strong> winner using our real-time interactive voting platform.
+            </p>
+            <Link to="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#111827', color: '#fff', padding: '14px 28px', borderRadius: '30px', fontWeight: '600', textDecoration: 'none' }}>
+              Register your Talent
+            </Link>
+          </div>
+          <div style={{ flex: '1 1 400px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+            <img src="https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=2070&auto=format&fit=crop" alt="Concert Stage" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        </div>
+      </section>
+
+      {/* Modern Clean Footer */}
+      <footer style={{ background: '#0f1015', color: '#9ca3af', padding: '60px 5% 40px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '40px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '40px', marginBottom: '40px' }}>
+          <div style={{ maxWidth: '300px' }}>
+            <h3 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: '700', margin: '0 0 16px 0' }}>SLIIT's Got Talent</h3>
+            <p style={{ margin: 0, lineHeight: '1.6' }}>The Official Voting & Event Platform. Brought to you by the Students' Community.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '60px', flexWrap: 'wrap' }}>
+            <div>
+              <h4 style={{ color: '#fff', margin: '0 0 16px 0', fontWeight: '600' }}>Platform</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Link to="/vote" style={{ color: '#9ca3af', textDecoration: 'none' }}>Vote Now</Link>
+                <Link to="/dashboard/rankings" style={{ color: '#9ca3af', textDecoration: 'none' }}>Live Rankings</Link>
+                <Link to="/login" style={{ color: '#9ca3af', textDecoration: 'none' }}>Student Login</Link>
+              </div>
+            </div>
+            <div>
+              <h4 style={{ color: '#fff', margin: '0 0 16px 0', fontWeight: '600' }}>Legal</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <a href="#" style={{ color: '#9ca3af', textDecoration: 'none' }}>Terms of Service</a>
+                <a href="#" style={{ color: '#9ca3af', textDecoration: 'none' }}>Privacy Policy</a>
+                <a href="https://www.sliit.lk" style={{ color: '#9ca3af', textDecoration: 'none' }}>SLIIT Website</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center', fontSize: '0.9rem' }}>
+          © {new Date().getFullYear()} SLIIT's Got Talent. Final Year / Student Community Initiative. Not officially affiliated with SLIIT Administration.
+        </div>
+      </footer>
     </div>
   );
 }

@@ -12,7 +12,7 @@ export default function LoginPage() {
   const location = useLocation();
   const { setSession, isAuthed } = useAuth();
 
-  const from = useMemo(() => location.state?.from?.pathname || '/dashboard/vote', [location.state]);
+  const from = useMemo(() => location.state?.from?.pathname || '/vote', [location.state]);
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
