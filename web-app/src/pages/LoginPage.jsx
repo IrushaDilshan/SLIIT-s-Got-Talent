@@ -60,7 +60,14 @@ export default function LoginPage() {
       const res = await api.post({ path: '/auth/verify', body: { email: cleanEmail, otp: cleanOtp } });
       if (!res?.token || !res?.user) throw new Error(res?.message || 'Invalid OTP');
       setSession({ token: res.token, user: res.user });
-      navigate(from, { replace: true });
+      
+      if (res.user.role === 'admin') {
+        navigate('/dashboard', { replace: true });
+      } else if (res.user.role === 'judge') {
+        navigate('/judge-dashboard', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Verification failed');
     } finally {

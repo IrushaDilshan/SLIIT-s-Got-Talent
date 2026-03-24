@@ -15,9 +15,6 @@ import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
-import JudgePanelDashboard from './pages/JudgePanelDashboard.jsx';
-import FinalLeaderboardDashboard from './pages/FinalLeaderboardDashboard.jsx';
-import FinalResult from './pages/FinalResult.jsx';
 
 
 export default function App() {
@@ -27,6 +24,15 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        
+        <Route 
+          path="/judge-dashboard" 
+          element={
+            <RequireAuth>
+              <JudgeDashboard />
+            </RequireAuth>
+          } 
+        />
 
         <Route
           path="/vote"
