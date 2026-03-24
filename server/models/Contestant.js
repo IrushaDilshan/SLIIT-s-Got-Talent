@@ -38,6 +38,11 @@ const contestantSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  remarks: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   imageUrl: {
     type: String,
   },

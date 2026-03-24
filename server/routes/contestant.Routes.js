@@ -5,6 +5,7 @@ const {
     getContestants, 
     registerContestant, 
     getAllContestantsAdmin, 
+    getContestantByIdAdmin,
     updateContestant, 
     deleteContestant 
 } = require('../controllers/contestant.Controller');
@@ -16,6 +17,7 @@ router.post('/', uploadContestantMedia, registerContestant);
 
 // Admin routes
 router.get('/admin', protect, authorize('admin'), getAllContestantsAdmin);
+router.get('/admin/:id', protect, authorize('admin'), getContestantByIdAdmin);
 router.put('/:id', protect, authorize('admin'), updateContestant);
 router.delete('/:id', protect, authorize('admin'), deleteContestant);
 

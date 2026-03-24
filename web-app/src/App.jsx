@@ -15,6 +15,7 @@ import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
+import ReviewPage from './pages/ReviewPage.jsx';
 
 export default function App() {
   return (
@@ -72,6 +73,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <CountdownPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="review/:id"
+            element={
+              <RequireAdmin>
+                <ReviewPage />
               </RequireAdmin>
             }
           />

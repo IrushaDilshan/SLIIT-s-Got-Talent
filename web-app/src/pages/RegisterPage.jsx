@@ -26,9 +26,8 @@ function validateMobile(mobile) {
 }
 
 function validateStudentId(id) {
-  return /^AA\d{8}$/.test(id); // Example: AA followed by 8 digits
+  return /^[A-Za-z]{2}\d{8}$/.test(id);// 2 letters followed by 8 digits
 }
-
 
 export default function RegisterPage() {
   const navigate = useNavigate();

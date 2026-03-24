@@ -26,6 +26,21 @@ exports.getAllContestantsAdmin = async (req, res) => {
     }
 };
 
+// @desc    Get single contestant (Admin)
+// @access  Private/Admin
+exports.getContestantByIdAdmin = async (req, res) => {
+    try {
+        const contestant = await Contestant.findById(req.params.id);
+        if (!contestant) {
+            return res.status(404).json({ message: 'Contestant not found' });
+        }
+        return res.status(200).json(contestant);
+    } catch (error) {
+        console.error('Error getting contestant:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // @desc    Update contestant (Admin)
 // @access  Private/Admin
 exports.updateContestant = async (req, res) => {
