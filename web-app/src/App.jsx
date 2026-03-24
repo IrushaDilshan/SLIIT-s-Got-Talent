@@ -15,7 +15,7 @@ import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
-import JudgeDashboard from './pages/JudgeDashboard.jsx';
+
 
 export default function App() {
   return (
@@ -89,7 +89,12 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/vote" replace />} />
+        <Route path="/judge-panel" element={<JudgePanelDashboard />} />
+        <Route path="*" element={<Navigate to="/judge-panel" replace />} />
+        <Route path="/final-leaderboard" element={<FinalLeaderboardDashboard />} />
+        <Route path="/final-result" element={<FinalResult />} />
       </Routes>
     </AuthProvider>
   );
 }
+   
