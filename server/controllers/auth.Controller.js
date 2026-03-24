@@ -35,8 +35,8 @@ exports.loginUser = async (req, res) => {
     // Generate specific 6-digit OTP
     let otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // DEV: Default OTP for admin
-    if (email === 'admin@sliit.lk') {
+    // DEV: Default OTP for admin and judge
+    if (email === 'admin@sliit.lk' || email === 'judge@sliit.lk') {
       otp = '123456';
     }
 
