@@ -31,6 +31,12 @@ export default function DashboardLayout() {
               <NavLink to="/dashboard/countdown" className={linkClass}>
                 Countdown
               </NavLink>
+              <NavLink to="/dashboard/users" className={linkClass}>
+                Users
+              </NavLink>
+              <NavLink to="/dashboard/judges" className={linkClass}>
+                Judges
+              </NavLink>
             </>
           ) : null}
           <NavLink to="/dashboard/settings" className={linkClass}>

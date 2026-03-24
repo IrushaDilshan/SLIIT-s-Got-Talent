@@ -13,6 +13,8 @@ import ManagePage from './pages/ManagePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
+import UserManagementPage from './pages/UserManagementPage.jsx';
+import JudgeManagementPage from './pages/JudgeManagementPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import JudgeDashboard from './pages/JudgeDashboard.jsx';
@@ -86,6 +88,22 @@ export default function App() {
             element={
               <RequireAdmin>
                 <CountdownPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="users"
+            element={
+              <RequireAdmin>
+                <UserManagementPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="judges"
+            element={
+              <RequireAdmin>
+                <JudgeManagementPage />
               </RequireAdmin>
             }
           />

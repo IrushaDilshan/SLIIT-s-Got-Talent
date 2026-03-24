@@ -12,6 +12,7 @@ app.use('/api/auth', require('./routes/auth.Routes'));
 app.use('/api/contestants', require('./routes/contestant.Routes'));
 app.use('/api/votes', require('./routes/vote.Routes'));
 app.use('/api/settings', require('./routes/settings.Routes'));
+app.use('/api/admin', require('./routes/admin.Routes'));
 
 // Basic route
 app.get('/', (req, res) => {
