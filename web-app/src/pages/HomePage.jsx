@@ -1,32 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.jsx';
+import { api } from '../services/apiClient.js';
 
 export function CountdownTimer() {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 12,
-    minutes: 25,
-    seconds: 45
-  });
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [targetTime, setTargetTime] = useState(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        let { hours, minutes, seconds } = prev;
-        if (seconds > 0) seconds--;
-        else {
-          seconds = 59;
-          if (minutes > 0) minutes--;
-          else {
-            minutes = 59;
-            if (hours > 0) hours--;
-          }
+    let active = true;
+    api.get({ path: '/settings' })
+      .then(res => {
+        if (active && res?.countdownEnd) {
+          setTargetTime(new Date(res.countdownEnd).getTime());
         }
-        return { hours, minutes, seconds };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+      })
+      .catch(err => console.error("Could not fetch countdown info", err));
+    return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!targetTime) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = targetTime - now;
+
+      if (diff <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        hours: Math.floor((diff / (1000 * 60 * 60))),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000)
+      });
+    };
+
+    updateTimer(); // Initial call
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [targetTime]);
 
   return (
     <div className="countdown-widget">
@@ -53,7 +68,8 @@ export function CountdownTimer() {
 
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user } = useAuth();
+  const { user, clearSession } = useAuth();
+  const navigate = useNavigate();
   // Filter out the word 'admin' from the greeting to avoid confusion on the public page
   const rawPrefix = user?.email ? user.email.split('@')[0] : 'Student';
   const userName = rawPrefix.toLowerCase() === 'admin' ? 'SLIIT Voter' : rawPrefix;
@@ -169,12 +185,24 @@ export default function HomePage() {
 
       {/* Navbar directly matching reference */}
       <nav className="glass-nav">
-        <Link to="/" className="nav-logo">SLIIT <span>|</span> Got Talent 2025</Link>
+        <Link to="/" className="nav-logo">Votify <span>|</span> SLIIT</Link>
         <div className="nav-links">
           <Link to="/" className="nav-link active">Home</Link>
           <Link to="/vote" className="nav-link">Meet Contestants</Link>
-          <Link to="/dashboard/rankings" className="nav-link">Live Results</Link>
-          <a href="#" className="help-btn">Need help?</a>
+          <Link to="/rankings" className="nav-link">Live Results</Link>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {user ? (
+              <button 
+                onClick={() => { clearSession(); navigate('/', { replace: true }); }} 
+                className="help-btn" 
+                style={{cursor: 'pointer', background: 'transparent'}}
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link to="/login" className="help-btn">Sign In</Link>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -289,7 +317,7 @@ export default function HomePage() {
               <h4 style={{ color: '#fff', margin: '0 0 16px 0', fontWeight: '600' }}>Platform</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <Link to="/vote" style={{ color: '#9ca3af', textDecoration: 'none' }}>Vote Now</Link>
-                <Link to="/dashboard/rankings" style={{ color: '#9ca3af', textDecoration: 'none' }}>Live Rankings</Link>
+                <Link to="/rankings" style={{ color: '#9ca3af', textDecoration: 'none' }}>Live Rankings</Link>
                 <Link to="/login" style={{ color: '#9ca3af', textDecoration: 'none' }}>Student Login</Link>
               </div>
             </div>

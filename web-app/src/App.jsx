@@ -15,6 +15,10 @@ import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
+import JudgePanelDashboard from './pages/JudgePanelDashboard.jsx';
+import FinalLeaderboardDashboard from './pages/FinalLeaderboardDashboard.jsx';
+import FinalResult from './pages/FinalResult.jsx';
+
 
 export default function App() {
   return (
@@ -34,6 +38,15 @@ export default function App() {
         />
 
         <Route
+          path="/rankings"
+          element={
+            <RequireAuth>
+              <RankingsPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/dashboard"
           element={
             <RequireAuth>
@@ -41,8 +54,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="rankings" replace />} />
-          <Route path="rankings" element={<RankingsPage />} />
+          <Route index element={<Navigate to="manage" replace />} />
           <Route
             path="manage"
             element={
@@ -71,7 +83,12 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/vote" replace />} />
+        <Route path="/judge-panel" element={<JudgePanelDashboard />} />
+        <Route path="*" element={<Navigate to="/judge-panel" replace />} />
+        <Route path="/final-leaderboard" element={<FinalLeaderboardDashboard />} />
+        <Route path="/final-result" element={<FinalResult />} />
       </Routes>
     </AuthProvider>
   );
 }
+   

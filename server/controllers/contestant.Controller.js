@@ -47,20 +47,49 @@ exports.updateContestant = async (req, res) => {
     }
 };
 
+const User = require('../models/User');
+const Vote = require('../models/Vote');
+
 // @desc    Delete contestant (Admin)
 // @access  Private/Admin
 exports.deleteContestant = async (req, res) => {
     try {
-        const contestant = await Contestant.findById(req.params.id);
+        const contestantId = req.params.id;
+        const contestant = await Contestant.findById(contestantId);
         if (!contestant) {
             return res.status(404).json({ message: 'Contestant not found' });
         }
 
+        const category = contestant.talentType;
+
+        // Find users who specifically voted for this contestant
+        const affectedUsers = await User.find({ votedContestants: contestantId });
+        
+        for (let user of affectedUsers) {
+            // Remove the specific contestant from array
+            user.votedContestants = user.votedContestants.filter(id => id.toString() !== contestantId.toString());
+            
+            // Re-evaluate category locks precisely since admin deleted the entry
+            // This safely forces users to vote again in that category
+            user.votedCategories = user.votedCategories.filter(cat => cat !== category);
+            
+            // Complete reset if no votes left across any category
+            if (user.votedCategories.length === 0) {
+                user.isVoted = false;
+            }
+            await user.save();
+        }
+
+        // Delete all corresponding votes cast for this person
+        await Vote.deleteMany({ contestantId });
+
+        // Proceed to delete the actual contestant entry
         await contestant.deleteOne();
-        return res.status(200).json({ success: true, message: 'Contestant removed' });
+        
+        return res.status(200).json({ success: true, message: 'Contestant and associated votes successfully removed' });
     } catch (error) {
         console.error('Error deleting contestant:', error);
-        return res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error while attempting to delete contestant details' });
     }
 };
 

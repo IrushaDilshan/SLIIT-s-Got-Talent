@@ -2,13 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { FiRefreshCw, FiAward, FiStar, FiTrendingUp } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function RankingsPage() {
-  const { token } = useAuth();
+  const { token, user, clearSession } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rows, setRows] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -28,6 +37,11 @@ export default function RankingsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  function handleLogout() {
+    clearSession();
+    navigate('/', { replace: true });
+  }
 
   // Group data by category (talentType)
   const groupedData = rows.reduce((acc, current) => {
@@ -50,8 +64,63 @@ export default function RankingsPage() {
   const sortedData = [...filteredData].sort((a, b) => b.votes - a.votes);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.headerGlass}>
+    <div style={{ backgroundColor: '#09090b', color: '#ffffff', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        body { margin: 0; background-color: #09090b; }
+        
+        /* Modern Fixed Navbar */
+        .glass-nav {
+          background: ${isScrolled ? 'rgba(9, 9, 11, 0.85)' : 'transparent'};
+          backdrop-filter: ${isScrolled ? 'blur(24px) saturate(1.5)' : 'none'};
+          border-bottom: ${isScrolled ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid transparent'};
+          transition: all 0.4s ease;
+          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+          padding: 20px 5%;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-link { color: #94A3B8; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: color 0.2s; }
+        .nav-link:hover { color: #fff; }
+        .nav-link.active { color: #FD5D73; font-weight: 600; }
+
+        .btn-outline {
+          background: transparent; border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #e2e8f0; font-weight: 500; font-size: 0.85rem; padding: 8px 20px;
+          border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-outline:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      `}</style>
+      
+      {/* Modern Fixed Navbar */}
+      <nav className="glass-nav">
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff', fontWeight: '900', letterSpacing: '-0.5px' }}>
+              Votify <span style={{ color: '#FD5D73' }}>SLIIT</span>
+            </h2>
+          </Link>
+        </div>
+        
+        <div className="nav-links">
+          <Link to="/" className="nav-link">Home</Link>
+          <Link to="/vote" className="nav-link">Meet Contestants</Link>
+          <Link to="/rankings" className="nav-link active">Live Results</Link>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {user ? (
+              <button onClick={handleLogout} className="btn-outline">Sign Out</button>
+            ) : (
+              <Link to="/login" className="btn-outline" style={{textDecoration: 'none'}}>Sign In</Link>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Container */}
+      <div style={styles.container}>
+        <div style={styles.headerGlass}>
         <div style={styles.headerInfo}>
           <h2 style={styles.titleGradient}>Live Leaderboard</h2>
           <p style={styles.subtitle}>Real-time rankings categorized by talent</p>
@@ -121,12 +190,13 @@ export default function RankingsPage() {
         @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
+    </div>
   );
 }
 
 const styles = {
   container: {
-    padding: '2rem',
+    padding: '120px 2rem 2rem 2rem',
     maxWidth: '1200px',
     margin: '0 auto',
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
