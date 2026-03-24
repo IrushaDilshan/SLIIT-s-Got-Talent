@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 
-const JudgePanelDashboard = () => {
+const JudgePanelDashboard = ({ embedded = false }) => {
   const [loggedInJudge] = useState({
     id: 2,
     name: "Judge Nethmi Fernando",
@@ -133,9 +133,9 @@ const JudgePanelDashboard = () => {
   const isSubmitted = !!submittedResults[activeContestant.id];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.bgOrbOne} />
-      <div style={styles.bgOrbTwo} />
+    <div style={{...styles.page, ...(embedded ? styles.embeddedPage : {})}}>
+      {!embedded && <div style={styles.bgOrbOne} />}
+      {!embedded && <div style={styles.bgOrbTwo} />}
 
       {message && (
         <div style={styles.toast}>
@@ -143,43 +143,45 @@ const JudgePanelDashboard = () => {
         </div>
       )}
 
-      <div style={styles.shell}>
-        {/* SIDEBAR */}
-        <aside style={styles.sidebar}>
-          <div style={styles.brandBox}>
-            <div style={styles.brandLogo}>SGT</div>
-            <div>
-              <h2 style={styles.brandTitle}>SLIIT Talent</h2>
-              <p style={styles.brandSub}>Judge Panel</p>
-            </div>
-          </div>
-
-          <div style={styles.sidebarCard}>
-            <div style={styles.judgeProfileRow}>
-              <img src={loggedInJudge.photo} alt={loggedInJudge.name} style={styles.profileAvatarLarge} />
+      <div style={{...styles.shell, ...(embedded ? styles.embeddedShell : {})}}>
+        {/* SIDEBAR - Hidden when embedded inside Dashboard */}
+        {!embedded && (
+          <aside style={styles.sidebar}>
+            <div style={styles.brandBox}>
+              <div style={styles.brandLogo}>SGT</div>
               <div>
-                <h3 style={styles.sidebarJudge}>{loggedInJudge.name}</h3>
-                <p style={styles.sidebarMutedSmall}>{loggedInJudge.role}</p>
+                <h2 style={styles.brandTitle}>SLIIT Talent</h2>
+                <p style={styles.brandSub}>Judge Panel</p>
               </div>
             </div>
-          </div>
 
-          <div style={styles.sidebarCard}>
-            <h4 style={styles.sidebarLabel}>Live Scoreboard</h4>
-            <div style={styles.leaderboardList}>
-              {scoreboard.map((item, index) => (
-                <div key={item.id} style={styles.leaderItem}>
-                  <div style={styles.leaderLeft}>
-                    <span style={styles.rankText}>#{index + 1}</span>
-                    <img src={item.photo} alt={item.name} style={styles.leaderPhoto} />
-                    <span style={styles.leaderName}>{item.name}</span>
-                  </div>
-                  <strong style={styles.leaderScore}>{item.judgeScore}</strong>
+            <div style={styles.sidebarCard}>
+              <div style={styles.judgeProfileRow}>
+                <img src={loggedInJudge.photo} alt={loggedInJudge.name} style={styles.profileAvatarLarge} />
+                <div>
+                  <h3 style={styles.sidebarJudge}>{loggedInJudge.name}</h3>
+                  <p style={styles.sidebarMutedSmall}>{loggedInJudge.role}</p>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        </aside>
+
+            <div style={styles.sidebarCard}>
+              <h4 style={styles.sidebarLabel}>Live Scoreboard</h4>
+              <div style={styles.leaderboardList}>
+                {scoreboard.map((item, index) => (
+                  <div key={item.id} style={styles.leaderItem}>
+                    <div style={styles.leaderLeft}>
+                      <span style={styles.rankText}>#{index + 1}</span>
+                      <img src={item.photo} alt={item.name} style={styles.leaderPhoto} />
+                      <span style={styles.leaderName}>{item.name}</span>
+                    </div>
+                    <strong style={styles.leaderScore}>{item.judgeScore}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        )}
 
         {/* MAIN CONTENT */}
         <main style={styles.main}>
@@ -322,17 +324,19 @@ const glass = {
 };
 
 const styles = {
-  page: { minHeight: "100vh", background: "linear-gradient(135deg, #070B19 0%, #111832 50%, #0F1322 100%)", color: "#ffffff", fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif", position: "relative", padding: "30px", overflowX: "hidden" },
-  bgOrbOne: { position: "absolute", top: "-10%", right: "10%", width: "40vw", height: "40vw", background: "radial-gradient(circle, rgba(111,76,255,0.15) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
-  bgOrbTwo: { position: "absolute", bottom: "-10%", left: "-10%", width: "50vw", height: "50vw", background: "radial-gradient(circle, rgba(35,201,255,0.1) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
+  page: { minHeight: "100vh", background: "linear-gradient(135deg, #070B19 0%, #111832 50%, #0F1322 100%)", color: "#f8fafc", fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif", position: "relative", padding: "30px", overflowX: "hidden" },
+  embeddedPage: { minHeight: "auto", background: "transparent", padding: "10px", margin: 0 },
+  bgOrbOne: { position: "absolute", top: "-10%", right: "10%", width: "40vw", height: "40vw", background: "radial-gradient(circle, rgba(233,69,96,0.15) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
+  bgOrbTwo: { position: "absolute", bottom: "-10%", left: "-10%", width: "50vw", height: "50vw", background: "radial-gradient(circle, rgba(233,69,96,0.1) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
   toast: { position: "fixed", top: "20px", left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg, #12b86d, #0ba35c)", padding: "12px 24px", borderRadius: "30px", fontWeight: "bold", zIndex: 100, boxShadow: "0 10px 30px rgba(18, 184, 109, 0.3)", animation: "fadeIn 0.3s ease" },
   shell: { maxWidth: "1400px", margin: "0 auto", display: "grid", gridTemplateColumns: "300px 1fr", gap: "30px", position: "relative", zIndex: 2 },
+  embeddedShell: { gridTemplateColumns: "1fr", maxWidth: "1200px" },
   
   sidebar: { ...glass, borderRadius: "24px", padding: "24px", height: "fit-content", position: "sticky", top: "30px" },
   brandBox: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "30px" },
-  brandLogo: { width: "48px", height: "48px", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", background: "linear-gradient(135deg, #6f4cff, #23c9ff)", color: "#fff" },
-  brandTitle: { margin: 0, fontSize: "20px", fontWeight: "800" },
-  brandSub: { margin: "4px 0 0 0", color: "#8fb6ff", fontSize: "13px", fontWeight: "600" },
+  brandLogo: { width: "48px", height: "48px", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", background: "linear-gradient(135deg, #e94560, #d1314a)", color: "#fff" },
+  brandTitle: { margin: 0, fontSize: "20px", fontWeight: "800", color: "#e94560" },
+  brandSub: { margin: "4px 0 0 0", color: "#f8fafc", fontSize: "13px", fontWeight: "600" },
   sidebarCard: { background: "rgba(255,255,255,0.03)", borderRadius: "16px", padding: "16px", marginBottom: "20px" },
   judgeProfileRow: { display: "flex", alignItems: "center", gap: "14px" },
   
@@ -345,19 +349,19 @@ const styles = {
   leaderboardList: { display: "flex", flexDirection: "column", gap: "10px" },
   leaderItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "rgba(0,0,0,0.2)", borderRadius: "12px" },
   leaderLeft: { display: "flex", alignItems: "center", gap: "10px" },
-  rankText: { color: "#8fb6ff", fontSize: "12px", fontWeight: "bold", minWidth: "20px" },
+  rankText: { color: "#e94560", fontSize: "12px", fontWeight: "bold", minWidth: "20px" },
   
   // Leaderboard photo style 👇
   leaderPhoto: { width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 },
   
-  leaderName: { fontSize: "14px", fontWeight: "600" },
-  leaderScore: { color: "#23c9ff", fontSize: "16px" },
+  leaderName: { fontSize: "14px", fontWeight: "600", color: "#f8fafc" },
+  leaderScore: { color: "#e94560", fontSize: "16px" },
   
   main: { display: "flex", flexDirection: "column", gap: "24px" },
   
   topbar: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px", marginBottom: "10px" },
-  eyebrowTitle: { margin: 0, color: "#8fb6ff", fontSize: "13px", letterSpacing: "1.5px", textTransform: "uppercase", fontWeight: "600" },
-  mainTitle: { margin: "6px 0 0 0", fontSize: "32px", fontWeight: "800", letterSpacing: "-0.5px" },
+  eyebrowTitle: { margin: 0, color: "#e94560", fontSize: "13px", letterSpacing: "1.5px", textTransform: "uppercase", fontWeight: "600" },
+  mainTitle: { margin: "6px 0 0 0", fontSize: "32px", fontWeight: "800", letterSpacing: "-0.5px", color: "#f8fafc" },
   sessionBadge: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 18px", background: "rgba(25, 45, 75, 0.6)", border: "1px solid rgba(40, 80, 130, 0.5)", borderRadius: "30px", color: "#aed4ff", fontSize: "14px", fontWeight: "600" },
   statusDot: { width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#50ffa3", boxShadow: "0 0 10px rgba(80, 255, 163, 0.6)" },
 
