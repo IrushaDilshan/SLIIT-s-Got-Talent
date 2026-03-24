@@ -4,18 +4,39 @@ const contestantSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true,
   },
   universityId: {
     type: String,
     required: true,
     unique: true,
+    trim: true,
+  },
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+  },
+  mobileNumber: {
+    type: String,
+    trim: true,
+  },
+  year: {
+    type: String,
+    trim: true,
+  },
+  semester: {
+    type: String,
+    trim: true,
   },
   talentType: {
     type: String,
     required: true,
+    trim: true,
   },
   description: {
     type: String,
+    trim: true,
   },
   imageUrl: {
     type: String,

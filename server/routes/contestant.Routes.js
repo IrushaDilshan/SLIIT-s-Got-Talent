@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { uploadContestantMedia } = require('../middleware/uploadMiddleware');
 const { 
     getContestants, 
     registerContestant, 
@@ -11,7 +12,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
 router.get('/', getContestants);
-router.post('/', registerContestant);
+router.post('/', uploadContestantMedia, registerContestant);
 
 // Admin routes
 router.get('/admin', protect, authorize('admin'), getAllContestantsAdmin);

@@ -1,52 +1,219 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/apiClient.js';
 
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+const FIXED_CATEGORIES = ['Singing', 'Dancing', 'Acting(Drama)', 'Music', 'Magic', 'Other'];
+const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const SEMESTER_OPTIONS = ['1st Semester', '2nd Semester'];
+
+function toMb(size) {
+  return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatFileMeta(file) {
+  if (!file) return 'No file selected';
+  return `${file.name} (${toMb(file.size)})`;
+}
+// Validation functiuons for form fields
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validateMobile(mobile) {
+  return /^[0-9]{10}$/.test(mobile); // 10 digits only
+}
+
+function validateStudentId(id) {
+  return /^AA\d{8}$/.test(id); // Example: AA followed by 8 digits
+}
+
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const pageTopRef = useRef(null);
+  const formErrorRef = useRef(null);
+  const fileErrorRef = useRef(null);
+  const universityIdRef = useRef(null);
+  const emailRef = useRef(null);
+  const mobileRef = useRef(null);
+  const yearRef = useRef(null);
+  const semesterRef = useRef(null);
+  const talentTypeRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     universityId: '',
+    email: '',
+    mobile: '',
+    year: '',
+    semester: '',
     talentType: '',
-    videoUrl: '',
-    bio: ''
+    description: ''
   });
-  const [categories, setCategories] = useState(['Singing', 'Dancing', 'Band', 'Magic/Other']);
+
+  
+  const [categories] = useState(FIXED_CATEGORIES);
+  const [years] = useState(YEAR_OPTIONS);
+  const [semesters] = useState(SEMESTER_OPTIONS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [videoPreview, setVideoPreview] = useState('');
+  const [fileError, setFileError] = useState('');
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await api.get({ path: '/settings' });
-        if (data && data.categories && data.categories.length > 0) {
-          setCategories(data.categories);
-          setFormData(prev => ({ ...prev, talentType: data.categories[0] }));
-        } else {
-          setFormData(prev => ({ ...prev, talentType: 'Singing' }));
-        }
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-        setFormData(prev => ({ ...prev, talentType: 'Singing' }));
-      }
-    };
-    fetchCategories();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    pageTopRef.current?.scrollIntoView({ block: 'start' });
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+    };
+  }, [imagePreview, videoPreview]);
+
+  const scrollToRef = (ref) => {
+    window.requestAnimationFrame(() => {
+      ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof ref?.current?.focus === 'function') {
+        ref.current.focus();
+      }
+    });
+  };
+
+  const setFormValidationError = (message, ref) => {
+    setError(message);
+    scrollToRef(ref || formErrorRef);
+  };
+
+  const setFileValidationError = (message, ref) => {
+    setFileError(message);
+    scrollToRef(ref || fileErrorRef);
+  };
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleImagePick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setFileError('Please select a valid image file.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setFileError('Image file must be less than 3 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setFileError('');
+    setImageFile(file);
+
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleVideoPick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      setFileError('Please select a valid video file.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_VIDEO_SIZE) {
+      setFileError('Video file must be less than 50 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setFileError('');
+    setVideoFile(file);
+
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFileError('');
+
+    if (!imageFile) {
+      setFileValidationError('Please upload a profile image under 3 MB.', imageInputRef);
+      return;
+    }
+
+    if (!videoFile) {
+      setFileValidationError('Please upload a performance video under 50 MB.', videoInputRef);
+      return;
+    }
+
+    if (!formData.talentType) {
+      setFormValidationError('Please select a talent category.', talentTypeRef);
+      return;
+    }
+
+    if (!formData.year) {
+      setFormValidationError('Please select your year.', yearRef);
+      return;
+    }
+
+    if (!formData.semester) {
+      setFormValidationError('Please select your semester.', semesterRef);
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      setFormValidationError('Please enter a valid email address.', emailRef);
+      return;
+    }
+
+    if (!validateMobile(formData.mobile)) {
+      setFormValidationError('Mobile number must be 10 digits.', mobileRef);
+      return;
+    }
+    
+    if (!validateStudentId(formData.universityId)) {
+      setFormValidationError('Student ID must follow the format AAxxxxxx.', universityIdRef);
+    return;
+    }
+
+
     setLoading(true);
+
+    const payload = new FormData();
+    payload.append('name', formData.name.trim());
+    payload.append('universityId', formData.universityId.trim());
+    payload.append('email', formData.email.trim());
+    payload.append('mobileNumber', formData.mobile.trim());
+    payload.append('year', formData.year);
+    payload.append('semester', formData.semester);
+    payload.append('talentType', formData.talentType);
+    payload.append('description', formData.description.trim());
+    payload.append('image', imageFile);
+    payload.append('video', videoFile);
+
     try {
-      await api.post({ path: '/contestants', body: formData });
+      await api.post({ path: '/contestants', body: payload });
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Error registering');
+      scrollToRef(formErrorRef);
     } finally {
       setLoading(false);
     }
@@ -55,13 +222,13 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={{ fontSize: '24px', marginBottom: '20px', color: 'var(--primary)' }}>Application Submitted!</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
-            Thank you for registering. Your application is under review. We will get back to you soon.
-          </p>
-          <button style={styles.backBtn} onClick={() => navigate('/')}>
-            Return to Home
+        <div style={styles.ambientGlowOne} />
+        <div style={styles.ambientGlowTwo} />
+        <div style={styles.successCard}>
+          <h2 style={styles.successTitle}>Application Submitted</h2>
+          <p style={styles.successText}>Thank you for registering. Your application is now in the review queue.</p>
+          <button style={styles.primaryBtn} onClick={() => navigate('/')}>
+            Return To Home
           </button>
         </div>
       </div>
@@ -69,43 +236,229 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={{ marginBottom: '20px', cursor: 'pointer', color: 'var(--text-muted)', alignSelf: 'flex-start' }} onClick={() => navigate(-1)}>
+    <div style={styles.container} ref={pageTopRef}>
+      <div style={styles.ambientGlowOne} />
+      <div style={styles.ambientGlowTwo} />
+
+      <div style={styles.backRow} onClick={() => navigate(-1)}>
         &larr; Back
       </div>
+
       <div style={styles.card}>
-        <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: '700' }}>Talent Registration</h2>
-        {error && <div style={styles.errorBanner}>{error}</div>}
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>FULL NAME</label>
-            <input name="name" value={formData.name} onChange={handleChange} required style={styles.input} />
+        <div style={styles.leftPanel}>
+          <span style={styles.tag}>Contestant Application</span>
+          <h2 style={styles.title}>Step Into The Spotlight</h2>
+          <p style={styles.subtitle}>
+            Submit your details with a clean profile image and a short performance video. Make your first impression count.
+          </p>
+
+          <div style={styles.quickRules}>
+            <p style={styles.ruleTitle}>Upload Rules</p>
+            <p style={styles.ruleItem}>Image must be less than 3 MB</p>
+            <p style={styles.ruleItem}>Video must be less than 50 MB</p>
+            <p style={styles.ruleItem}>Supported formats: common image and video types</p>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>STUDENT ID</label>
-            <input name="universityId" value={formData.universityId} onChange={handleChange} required style={styles.input} />
+
+          <div style={styles.previewWrap}>
+            <div style={styles.previewCard}>
+              <p style={styles.previewLabel}>Image Preview</p>
+              {imagePreview ? (
+                <img src={imagePreview} alt="Selected contestant" style={styles.imagePreview} />
+              ) : (
+                <div style={styles.previewPlaceholder}>No image selected yet</div>
+              )}
+              <p style={styles.fileMeta}>{formatFileMeta(imageFile)}</p>
+            </div>
+
+            <div style={styles.previewCard}>
+              <p style={styles.previewLabel}>Video Preview</p>
+              {videoPreview ? (
+                <video src={videoPreview} controls style={styles.videoPreview} />
+              ) : (
+                <div style={styles.previewPlaceholder}>No video selected yet</div>
+              )}
+              <p style={styles.fileMeta}>{formatFileMeta(videoFile)}</p>
+            </div>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>CATEGORY</label>
-            <select name="talentType" value={formData.talentType} onChange={handleChange} style={{ ...styles.input, color: '#fff', backgroundColor: '#1a1a24' }}>
-              {categories.map((cat, idx) => (
-                <option key={idx} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>VIDEO LINK (YouTube/Drive)</label>
-            <input name="videoUrl" value={formData.videoUrl} onChange={handleChange} style={styles.input} />
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>SHORT BIO</label>
-            <textarea name="bio" value={formData.bio} onChange={handleChange} rows="3" style={styles.input}></textarea>
-          </div>
-          <button type="submit" disabled={loading} style={styles.primaryBtn}>
-            {loading ? 'Submitting...' : 'Submit Application'}
-          </button>
-        </form>
+
+          {fileError && <div style={styles.errorBanner} ref={fileErrorRef}>{fileError}</div>}
+        </div>
+
+        <div style={styles.rightPanel}>
+          <h3 style={styles.formTitle}>Talent Registration</h3>
+          {error && <div style={styles.errorBanner} ref={formErrorRef}>{error}</div>}
+
+          <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Full Name</label>
+              <input
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                style={styles.input}
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Student ID</label>
+              <input
+                ref={universityIdRef}
+                name="universityId"
+                value={formData.universityId}
+                onChange={handleChange}
+                required
+                style={styles.input}
+                placeholder="AAxxxxxxxx"
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Email Address</label>
+              <input
+                ref={emailRef}
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                style={styles.input}
+                placeholder="Enter your email address"
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Mobile number</label>
+              <input
+                ref={mobileRef}
+                name="mobile"
+                value={formData.mobile}
+                onChange={handleChange}
+                required
+                style={styles.input}
+                placeholder="07xxxxxxxx"
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Year</label>
+              <select
+                ref={yearRef}
+                name="year"
+                value={formData.year}
+                onChange={handleChange}
+                style={{ ...styles.input, appearance: 'none' }}
+                required
+              >
+                <option value="" disabled>
+                  Select Year
+                </option>
+                {years.map((year, idx) => (
+                  <option
+                    key={idx}
+                    value={year}
+                    style={{ backgroundColor: '#dbe4ee', color: '#0f172a' }}
+                  >
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Semester</label>
+              <select
+                ref={semesterRef}
+                name="semester"
+                value={formData.semester}
+                onChange={handleChange}
+                style={{ ...styles.input, appearance: 'none' }}
+                required
+              >
+                <option value="" disabled>
+                  Select Semester
+                </option>
+                {semesters.map((semester, idx) => (
+                  <option
+                    key={idx}
+                    value={semester}
+                    style={{ backgroundColor: '#dbe4ee', color: '#0f172a' }}
+                  >
+                    {semester}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Category</label>
+              <select
+                ref={talentTypeRef}
+                name="talentType"
+                value={formData.talentType}
+                onChange={handleChange}
+                style={{ ...styles.input, appearance: 'none' }}
+                required
+              >
+                <option value="" disabled>
+                  Select Talent
+                </option>
+                {categories.map((cat, idx) => (
+                  <option
+                    key={idx}
+                    value={cat}
+                    style={{ backgroundColor: '#dbe4ee', color: '#0f172a' }}
+                  >
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <span style={styles.helperText}>Available categories: {categories.join(', ')}</span>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Profile Image</label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImagePick}
+                style={styles.fileInput}
+                required
+              />
+              <span style={styles.helperText}>Maximum size: 3 MB</span>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Performance Video</label>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoPick}
+                style={styles.fileInput}
+                required
+              />
+              <span style={styles.helperText}>Maximum size: 50 MB</span>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Short Bio</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="4"
+                style={{ ...styles.input, resize: 'vertical' }}
+                placeholder="Tell us about your performance style"
+              />
+            </div>
+
+            <button type="submit" disabled={loading} style={styles.primaryBtn}>
+              {loading ? 'Submitting...' : 'Submit Application'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -114,22 +467,172 @@ export default function RegisterPage() {
 const styles = {
   container: {
     minHeight: '100vh',
+    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px',
-    backgroundColor: 'var(--bg-dark)',
-    fontFamily: "'Sora', sans-serif"
+    padding: '24px',
+    background: 'radial-gradient(circle at 10% 20%, #13293d 0%, #0b0f1a 35%, #05070c 100%)',
+    fontFamily: "'Sora', sans-serif",
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  ambientGlowOne: {
+    position: 'absolute',
+    width: '480px',
+    height: '480px',
+    top: '-180px',
+    left: '-140px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0) 72%)',
+    pointerEvents: 'none'
+  },
+  ambientGlowTwo: {
+    position: 'absolute',
+    width: '520px',
+    height: '520px',
+    bottom: '-210px',
+    right: '-190px',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(249,115,22,0.2) 0%, rgba(249,115,22,0) 70%)',
+    pointerEvents: 'none'
+  },
+  backRow: {
+    width: '100%',
+    maxWidth: '1120px',
+    color: '#b9c7d6',
+    marginBottom: '16px',
+    cursor: 'pointer',
+    zIndex: 2,
+    fontSize: '0.95rem',
+    fontWeight: 600
   },
   card: {
     width: '100%',
-    maxWidth: '500px',
-    background: 'rgba(255, 255, 255, 0.03)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '16px',
-    padding: '30px',
-    backdropFilter: 'blur(20px)'
+    maxWidth: '1120px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))',
+    border: '1px solid rgba(255, 255, 255, 0.14)',
+    borderRadius: '24px',
+    backdropFilter: 'blur(18px)',
+    overflow: 'hidden',
+    boxShadow: '0 30px 70px rgba(0, 0, 0, 0.45)',
+    zIndex: 2
+  },
+  leftPanel: {
+    padding: '34px',
+    borderRight: '1px solid rgba(255, 255, 255, 0.11)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    background: 'linear-gradient(170deg, rgba(8,26,43,0.8), rgba(3,10,22,0.8))'
+  },
+  rightPanel: {
+    padding: '34px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  tag: {
+    width: 'fit-content',
+    background: 'rgba(34, 211, 238, 0.16)',
+    border: '1px solid rgba(34, 211, 238, 0.35)',
+    color: '#9be8f5',
+    padding: '6px 12px',
+    borderRadius: '999px',
+    fontSize: '0.75rem',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    fontWeight: 700
+  },
+  title: {
+    margin: 0,
+    color: '#f8fafc',
+    fontSize: '2rem',
+    lineHeight: 1.2,
+    letterSpacing: '0.01em'
+  },
+  subtitle: {
+    margin: 0,
+    color: '#bfd0e1',
+    lineHeight: 1.7,
+    fontSize: '0.98rem'
+  },
+  quickRules: {
+    border: '1px dashed rgba(255,255,255,0.22)',
+    borderRadius: '14px',
+    padding: '14px',
+    background: 'rgba(2, 10, 22, 0.45)'
+  },
+  ruleTitle: {
+    margin: '0 0 8px 0',
+    color: '#f8fafc',
+    fontWeight: 700,
+    fontSize: '0.95rem'
+  },
+  ruleItem: {
+    margin: '4px 0',
+    color: '#b7c8d9',
+    fontSize: '0.88rem'
+  },
+  previewWrap: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '12px',
+    marginTop: '8px'
+  },
+  previewCard: {
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '12px',
+    padding: '12px',
+    background: 'rgba(255,255,255,0.03)'
+  },
+  previewLabel: {
+    margin: '0 0 8px 0',
+    color: '#d9e5f1',
+    fontWeight: 600,
+    fontSize: '0.85rem'
+  },
+  previewPlaceholder: {
+    height: '120px',
+    border: '1px dashed rgba(255,255,255,0.2)',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#9aa8b8',
+    fontSize: '0.86rem'
+  },
+  imagePreview: {
+    width: '100%',
+    maxHeight: '220px',
+    borderRadius: '10px',
+    objectFit: 'cover',
+    border: '1px solid rgba(255,255,255,0.18)'
+  },
+  videoPreview: {
+    width: '100%',
+    borderRadius: '10px',
+    border: '1px solid rgba(255,255,255,0.18)',
+    backgroundColor: '#0d1117'
+  },
+  fileMeta: {
+    margin: '8px 0 0 0',
+    color: '#98a9bb',
+    fontSize: '0.78rem'
+  },
+  formTitle: {
+    margin: 0,
+    color: '#f8fafc',
+    fontSize: '1.55rem',
+    fontWeight: 700
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px'
   },
   inputGroup: {
     display: 'flex',
@@ -137,44 +640,71 @@ const styles = {
     gap: '8px'
   },
   label: {
-    fontSize: '0.85rem',
-    fontWeight: '600',
-    color: 'var(--text-muted)'
+    fontSize: '0.82rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    color: '#afc1d5'
   },
   input: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    background: 'rgba(0, 0, 0, 0.2)',
-    color: '#fff',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    background: 'rgba(255, 255, 255, 0.06)',
+    color: '#f8fafc',
     outline: 'none',
-    fontSize: '1rem'
+    fontSize: '0.98rem'
+  },
+  fileInput: {
+    borderRadius: '10px',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    background: 'rgba(255, 255, 255, 0.06)',
+    color: '#f8fafc',
+    fontSize: '0.92rem',
+    padding: '10px'
+  },
+  helperText: {
+    color: '#8fa2b7',
+    fontSize: '0.78rem'
   },
   primaryBtn: {
-    padding: '14px',
-    borderRadius: '8px',
-    background: 'var(--gradient-1)',
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: '1rem',
+    marginTop: '6px',
+    padding: '13px 14px',
+    borderRadius: '10px',
+    background: 'linear-gradient(90deg, #06b6d4, #f97316)',
+    color: '#ffffff',
+    fontWeight: 700,
+    fontSize: '0.98rem',
     border: 'none',
-    cursor: 'pointer',
-    marginTop: '10px'
-  },
-  backBtn: {
-    padding: '10px 20px',
-    borderRadius: '8px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'transparent',
-    color: '#fff',
     cursor: 'pointer'
   },
   errorBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    color: '#ef4444',
-    padding: '12px',
+    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    color: '#fca5a5',
+    padding: '10px 12px',
     borderRadius: '8px',
-    marginBottom: '16px',
-    border: '1px solid rgba(239, 68, 68, 0.2)'
+    border: '1px solid rgba(248, 113, 113, 0.32)',
+    fontSize: '0.86rem'
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: '560px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255, 255, 255, 0.14)',
+    padding: '36px',
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
+    backdropFilter: 'blur(20px)',
+    textAlign: 'center',
+    zIndex: 2
+  },
+  successTitle: {
+    margin: '0 0 8px 0',
+    fontSize: '1.9rem',
+    color: '#f8fafc'
+  },
+  successText: {
+    margin: '0 0 20px 0',
+    color: '#c3d3e3',
+    lineHeight: 1.6
   }
 };
