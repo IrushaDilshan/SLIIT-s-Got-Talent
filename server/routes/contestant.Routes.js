@@ -6,6 +6,7 @@ const {
     registerContestant, 
     getAllContestantsAdmin, 
     getContestantByIdAdmin,
+    getMyApplication,
     updateContestant, 
     deleteContestant 
 } = require('../controllers/contestant.Controller');
@@ -13,6 +14,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
 router.get('/', getContestants);
+router.get('/my-application', protect, getMyApplication);
 router.post('/', uploadContestantMedia, registerContestant);
 
 // Admin routes
