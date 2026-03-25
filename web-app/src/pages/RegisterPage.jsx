@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/apiClient.js';
+import { useAuth } from '../components/AuthContext.jsx';
 
 const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
@@ -31,6 +32,11 @@ function validateStudentId(id) {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, token } = useAuth();
+  const loggedInEmail = user?.email?.trim() || '';
+  const isReapplyFlow = Boolean(location.state?.reapply);
+  const prefillData = location.state?.prefill || null;
   const pageTopRef = useRef(null);
   const formErrorRef = useRef(null);
   const fileErrorRef = useRef(null);
@@ -65,6 +71,7 @@ export default function RegisterPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [videoPreview, setVideoPreview] = useState('');
   const [fileError, setFileError] = useState('');
+  const [checkingApplication, setCheckingApplication] = useState(true);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -77,6 +84,73 @@ export default function RegisterPage() {
       if (videoPreview) URL.revokeObjectURL(videoPreview);
     };
   }, [imagePreview, videoPreview]);
+
+  useEffect(() => {
+    if (!loggedInEmail) return;
+    setFormData((prev) => ({ ...prev, email: loggedInEmail }));
+  }, [loggedInEmail]);
+
+  useEffect(() => {
+    if (!prefillData) return;
+    setFormData((prev) => ({
+      ...prev,
+      name: prefillData.name || '',
+      universityId: prefillData.universityId || '',
+      email: loggedInEmail || prefillData.email || '',
+      mobile: prefillData.mobileNumber || prefillData.mobile || '',
+      year: prefillData.year || '',
+      semester: prefillData.semester || '',
+      talentType: prefillData.talentType || '',
+      description: prefillData.description || ''
+    }));
+  }, [prefillData, loggedInEmail]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkExistingApplication() {
+      if (!token) {
+        setCheckingApplication(false);
+        return;
+      }
+
+      try {
+        const res = await api.get({ path: '/contestants/my-application', token });
+        const existing = res?.hasApplication ? res?.data : null;
+
+        if (!cancelled && existing) {
+          const canReapply = existing.status === 'rejected';
+          if (!isReapplyFlow || !canReapply) {
+            navigate('/application-status', { replace: true });
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            name: existing.name || '',
+            universityId: existing.universityId || '',
+            email: loggedInEmail || existing.email || '',
+            mobile: existing.mobileNumber || '',
+            year: existing.year || '',
+            semester: existing.semester || '',
+            talentType: existing.talentType || '',
+            description: existing.description || ''
+          }));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Unable to verify your application status.');
+        }
+      } finally {
+        if (!cancelled) setCheckingApplication(false);
+      }
+    }
+
+    checkExistingApplication();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, navigate, isReapplyFlow, loggedInEmail]);
 
   const scrollToRef = (ref) => {
     window.requestAnimationFrame(() => {
@@ -98,6 +172,7 @@ export default function RegisterPage() {
   };
 
   const handleChange = (e) => {
+    if (e.target.name === 'email' && loggedInEmail) return;
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -177,7 +252,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!validateEmail(formData.email)) {
+    const finalEmail = loggedInEmail || formData.email.trim();
+
+    if (!loggedInEmail) {
+      setFormValidationError('Please login first to use your verified email address.', emailRef);
+      return;
+    }
+
+    if (!validateEmail(finalEmail)) {
       setFormValidationError('Please enter a valid email address.', emailRef);
       return;
     }
@@ -198,7 +280,7 @@ export default function RegisterPage() {
     const payload = new FormData();
     payload.append('name', formData.name.trim());
     payload.append('universityId', formData.universityId.trim());
-    payload.append('email', formData.email.trim());
+    payload.append('email', finalEmail);
     payload.append('mobileNumber', formData.mobile.trim());
     payload.append('year', formData.year);
     payload.append('semester', formData.semester);
@@ -208,7 +290,7 @@ export default function RegisterPage() {
     payload.append('video', videoFile);
 
     try {
-      await api.post({ path: '/contestants', body: payload });
+      await api.post({ path: '/contestants', token, body: payload });
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Error registering');
@@ -234,6 +316,19 @@ export default function RegisterPage() {
     );
   }
 
+  if (checkingApplication) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.ambientGlowOne} />
+        <div style={styles.ambientGlowTwo} />
+        <div style={styles.successCard}>
+          <h2 style={styles.successTitle}>Checking Application</h2>
+          <p style={styles.successText}>Please wait while we verify your existing submission.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container} ref={pageTopRef}>
       <div style={styles.ambientGlowOne} />
@@ -250,6 +345,14 @@ export default function RegisterPage() {
           <p style={styles.subtitle}>
             Submit your details with a clean profile image and a short performance video. Make your first impression count.
           </p>
+
+          {isReapplyFlow ? (
+            <div style={{ ...styles.quickRules, borderColor: 'rgba(251, 191, 36, 0.5)', background: 'rgba(120, 53, 15, 0.18)' }}>
+              <p style={styles.ruleTitle}>Re-Apply Mode</p>
+              <p style={styles.ruleItem}>Your previous details are pre-filled from your last rejected application.</p>
+              <p style={styles.ruleItem}>Update anything necessary and upload new files before submitting again.</p>
+            </div>
+          ) : null}
 
           <div style={styles.quickRules}>
             <p style={styles.ruleTitle}>Upload Rules</p>
@@ -318,12 +421,14 @@ export default function RegisterPage() {
               <input
                 ref={emailRef}
                 name="email"
-                value={formData.email}
+                value={loggedInEmail || formData.email}
                 onChange={handleChange}
+                readOnly
                 required
                 style={styles.input}
-                placeholder="Enter your email address"
+                placeholder={loggedInEmail ? '' : 'Login required to auto-fill email'}
               />
+              <span style={styles.helperText}>This field is auto-filled from your logged-in account and cannot be edited.</span>
             </div>
 
             <div style={styles.inputGroup}>
@@ -454,7 +559,7 @@ export default function RegisterPage() {
             </div>
 
             <button type="submit" disabled={loading} style={styles.primaryBtn}>
-              {loading ? 'Submitting...' : 'Submit Application'}
+              {loading ? 'Submitting...' : isReapplyFlow ? 'Submit Re-Application' : 'Submit Application'}
             </button>
           </form>
         </div>

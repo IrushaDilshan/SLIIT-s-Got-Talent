@@ -240,6 +240,11 @@ export default function HomePage() {
               <span className="live-dot"></span>
               LIVE Voting is open now
             </div>
+            {user ? (
+              <Link to="/application-status" className="help-btn" style={{ color: '#111827', borderColor: '#d1d5db' }}>
+                My Application
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
