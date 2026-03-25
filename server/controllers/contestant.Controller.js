@@ -1,4 +1,5 @@
 const Contestant = require('../models/Contestant');
+const path = require('path');
 
 // @desc    Get public approved contestants
 // @route   GET /api/contestants
@@ -21,6 +22,21 @@ exports.getAllContestantsAdmin = async (req, res) => {
         return res.status(200).json(contestants);
     } catch (error) {
         console.error('Error getting all contestants:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get single contestant (Admin)
+// @access  Private/Admin
+exports.getContestantByIdAdmin = async (req, res) => {
+    try {
+        const contestant = await Contestant.findById(req.params.id);
+        if (!contestant) {
+            return res.status(404).json({ message: 'Contestant not found' });
+        }
+        return res.status(200).json(contestant);
+    } catch (error) {
+        console.error('Error getting contestant:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -97,10 +113,38 @@ exports.deleteContestant = async (req, res) => {
 // @route   POST /api/contestants
 // @access  Public
 exports.registerContestant = async (req, res) => {
-    const { name, universityId, talentType, description, imageUrl, videoUrl } = req.body;
-    
-    if (!name || !universityId || !talentType) {
-        return res.status(400).json({ message: 'Name, universityId and talentType are required' });
+    const {
+        name,
+        universityId,
+        email,
+        year,
+        semester,
+        talentType,
+        description,
+        mobileNumber,
+        mobile
+    } = req.body;
+
+    const imageFile = req.files?.image?.[0];
+    const videoFile = req.files?.video?.[0];
+    const resolvedMobileNumber = (mobileNumber || mobile || '').trim();
+
+    if (!name || !universityId || !email || !resolvedMobileNumber || !year || !semester || !talentType) {
+        return res.status(400).json({
+            message: 'name, universityId, email, mobileNumber, year, semester and talentType are required'
+        });
+    }
+
+    if (!imageFile || !videoFile) {
+        return res.status(400).json({ message: 'Image and video files are required' });
+    }
+
+    if (imageFile.size > (3 * 1024 * 1024)) {
+        return res.status(400).json({ message: 'Image file must be less than 3 MB' });
+    }
+
+    if (videoFile.size > (50 * 1024 * 1024)) {
+        return res.status(400).json({ message: 'Video file must be less than 50 MB' });
     }
 
     try {
@@ -109,9 +153,16 @@ exports.registerContestant = async (req, res) => {
             return res.status(400).json({ message: 'Contestant with this universityId already exists' });
         }
 
+        const imageUrl = path.posix.join('/uploads/contestants', imageFile.filename);
+        const videoUrl = path.posix.join('/uploads/contestants', videoFile.filename);
+
         const contestant = await Contestant.create({
             name,
             universityId,
+            email,
+            mobileNumber: resolvedMobileNumber,
+            year,
+            semester,
             talentType,
             description,
             imageUrl,

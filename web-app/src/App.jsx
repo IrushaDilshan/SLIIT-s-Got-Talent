@@ -20,6 +20,7 @@ import JudgePanelDashboard from './pages/JudgePanelDashboard.jsx';
 import FinalLeaderboardDashboard from './pages/FinalLeaderboardDashboard.jsx';
 import FinalResult from './pages/FinalResult.jsx';
 
+import ReviewPage from './pages/ReviewPage.jsx';
 
 export default function App() {
   return (
@@ -86,6 +87,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <CountdownPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="review/:id"
+            element={
+              <RequireAdmin>
+                <ReviewPage />
               </RequireAdmin>
             }
           />
