@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 const JudgePanelDashboard = ({ embedded = false }) => {
   const [loggedInJudge] = useState({
@@ -81,6 +81,15 @@ const JudgePanelDashboard = ({ embedded = false }) => {
       return matchesCategory && matchesSearch;
     });
   }, [contestants, selectedCategory, searchTerm]);
+
+  useEffect(() => {
+    if (filteredContestants.length > 0) {
+      const isStillInList = filteredContestants.some(c => c.id === activeContestantId);
+      if (!isStillInList) {
+        setActiveContestantId(filteredContestants[0].id);
+      }
+    }
+  }, [filteredContestants, activeContestantId]);
 
   const handleScoreChange = (id, field, value) => {
     const score = Math.max(0, Math.min(25, Number(value) || 0));

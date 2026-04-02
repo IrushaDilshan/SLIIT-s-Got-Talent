@@ -60,8 +60,12 @@ export default function VotingScreen({ navigation }) {
             } else {
                 setContestants([]);
             }
-            if (setRes.data && setRes.data.categories) {
+            if (setRes.data && setRes.data.categories && setRes.data.categories.length > 0) {
                 setCategories(['All', ...setRes.data.categories]);
+            } else if (conRes.data && conRes.data.length > 0) {
+                // Determine categories from contestants if not strictly provided in settings or if empty
+                const uniqueCategories = [...new Set(conRes.data.map(c => c.talentType).filter(Boolean))];
+                setCategories(['All', ...uniqueCategories]);
             } else {
                 setCategories(['All', 'Singing', 'Dancing', 'Other']);
             }
