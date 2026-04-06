@@ -1,21 +1,43 @@
-const express = require('express');
+/**
+ * Contestant Routes
+ * Handles contestant retrieval and management for judging
+ */
+
+const express = require("express");
 const router = express.Router();
-const { 
-    getContestants, 
-    registerContestant, 
-    getAllContestantsAdmin, 
-    updateContestant, 
-    deleteContestant 
-} = require('../controllers/contestant.Controller');
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
 
-router.get('/', getContestants);
-router.post('/', registerContestant);
+const {
+  getAllContestants,
+  getContestantById,
+  createContestant,
+  updateContestant,
+  deleteContestant,
+} = require("../controllers/contestant.Controller");
 
-// Admin routes
-router.get('/admin', protect, authorize('admin'), getAllContestantsAdmin);
-router.put('/:id', protect, authorize('admin'), updateContestant);
-router.delete('/:id', protect, authorize('admin'), deleteContestant);
+const authMiddleware = require("../middleware/authMiddleware");
+const { requireAdmin } = require("../middleware/roleMiddleware");
+
+/**
+ * Public routes (no auth required)
+ */
+
+// GET /api/contestants - Get all contestants
+router.get("/", getAllContestants);
+
+// GET /api/contestants/:id - Get single contestant by ID
+router.get("/:id", getContestantById);
+
+/**
+ * Admin routes (requires auth + admin role)
+ */
+
+// POST /api/contestants - Create new contestant
+router.post("/", authMiddleware, requireAdmin, createContestant);
+
+// PUT /api/contestants/:id - Update contestant
+router.put("/:id", authMiddleware, requireAdmin, updateContestant);
+
+// DELETE /api/contestants/:id - Delete contestant
+router.delete("/:id", authMiddleware, requireAdmin, deleteContestant);
 
 module.exports = router;

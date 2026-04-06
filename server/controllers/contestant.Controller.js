@@ -1,130 +1,241 @@
 const Contestant = require('../models/Contestant');
 
-// @desc    Get public approved contestants
-// @route   GET /api/contestants
-// @access  Public
-exports.getContestants = async (req, res) => {
+/**
+ * @desc    Get all contestants with optional filtering by round or status
+ * @route   GET /api/contestants?round=Preliminary&status=pending
+ * @access  Public
+ */
+exports.getAllContestants = async (req, res) => {
     try {
-        const contestants = await Contestant.find({ status: 'approved' }).sort({ createdAt: 1 });
-        return res.status(200).json(contestants);
-    } catch (error) {
-        console.error('Error getting contestants:', error);
-        return res.status(500).json({ message: 'Server error while fetching contestants' });
-    }
-};
+        const { round, status, page = 1, limit = 10 } = req.query;
 
-// @desc    Get all contestants (Admin)
-// @access  Private/Admin
-exports.getAllContestantsAdmin = async (req, res) => {
-    try {
-        const contestants = await Contestant.find({}).sort({ createdAt: -1 });
-        return res.status(200).json(contestants);
-    } catch (error) {
-        console.error('Error getting all contestants:', error);
-        return res.status(500).json({ message: 'Server error' });
-    }
-};
+        // Build filter object
+        const filter = {};
+        if (round) filter.round = round;
+        if (status) filter.status = status;
 
-// @desc    Update contestant (Admin)
-// @access  Private/Admin
-exports.updateContestant = async (req, res) => {
-    try {
-        const contestant = await Contestant.findById(req.params.id);
-        if (!contestant) {
-            return res.status(404).json({ message: 'Contestant not found' });
-        }
+        // Calculate pagination
+        const skip = (page - 1) * limit;
 
-        const updatedContestant = await Contestant.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
+        // Fetch contestants
+        const contestants = await Contestant.find(filter)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
 
-        return res.status(200).json({ success: true, data: updatedContestant });
-    } catch (error) {
-        console.error('Error updating contestant:', error);
-        return res.status(500).json({ message: 'Server error' });
-    }
-};
+        const total = await Contestant.countDocuments(filter);
 
-const User = require('../models/User');
-const Vote = require('../models/Vote');
-
-// @desc    Delete contestant (Admin)
-// @access  Private/Admin
-exports.deleteContestant = async (req, res) => {
-    try {
-        const contestantId = req.params.id;
-        const contestant = await Contestant.findById(contestantId);
-        if (!contestant) {
-            return res.status(404).json({ message: 'Contestant not found' });
-        }
-
-        const category = contestant.talentType;
-
-        // Find users who specifically voted for this contestant
-        const affectedUsers = await User.find({ votedContestants: contestantId });
-        
-        for (let user of affectedUsers) {
-            // Remove the specific contestant from array
-            user.votedContestants = user.votedContestants.filter(id => id.toString() !== contestantId.toString());
-            
-            // Re-evaluate category locks precisely since admin deleted the entry
-            // This safely forces users to vote again in that category
-            user.votedCategories = user.votedCategories.filter(cat => cat !== category);
-            
-            // Complete reset if no votes left across any category
-            if (user.votedCategories.length === 0) {
-                user.isVoted = false;
-            }
-            await user.save();
-        }
-
-        // Delete all corresponding votes cast for this person
-        await Vote.deleteMany({ contestantId });
-
-        // Proceed to delete the actual contestant entry
-        await contestant.deleteOne();
-        
-        return res.status(200).json({ success: true, message: 'Contestant and associated votes successfully removed' });
-    } catch (error) {
-        console.error('Error deleting contestant:', error);
-        return res.status(500).json({ message: 'Server error while attempting to delete contestant details' });
-    }
-};
-
-// @desc    Register a contestant
-// @route   POST /api/contestants
-// @access  Public
-exports.registerContestant = async (req, res) => {
-    const { name, universityId, talentType, description, imageUrl, videoUrl } = req.body;
-    
-    if (!name || !universityId || !talentType) {
-        return res.status(400).json({ message: 'Name, universityId and talentType are required' });
-    }
-
-    try {
-        const existing = await Contestant.findOne({ universityId });
-        if (existing) {
-            return res.status(400).json({ message: 'Contestant with this universityId already exists' });
-        }
-
-        const contestant = await Contestant.create({
-            name,
-            universityId,
-            talentType,
-            description,
-            imageUrl,
-            videoUrl,
-            status: 'pending' // Default to pending
+        return res.status(200).json({
+            success: true,
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            data: contestants,
         });
+    } catch (error) {
+        console.error('Error fetching contestants:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while fetching contestants',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * @desc    Get single contestant by ID
+ * @route   GET /api/contestants/:id
+ * @access  Public
+ */
+exports.getContestantById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid contestant ID format',
+            });
+        }
+
+        const contestant = await Contestant.findById(id);
+
+        if (!contestant) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contestant not found',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: contestant,
+        });
+    } catch (error) {
+        console.error('Error fetching contestant:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while fetching contestant',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * @desc    Create new contestant (Admin only)
+ * @route   POST /api/contestants
+ * @access  Private/Admin
+ */
+exports.createContestant = async (req, res) => {
+    try {
+        const { name, category, round, performanceTitle, photo, status, timeSlot, regNumber, contactNumber } = req.body;
+
+        // Validate required fields
+        if (!name || !category || !round) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: name, category, round',
+            });
+        }
+
+        // Create new contestant
+        const newContestant = new Contestant({
+            name,
+            category,
+            round,
+            performanceTitle: performanceTitle || '',
+            photo: photo || '',
+            status: status || 'pending',
+            timeSlot: timeSlot || '',
+            regNumber: regNumber || '',
+            contactNumber: contactNumber || '',
+        });
+
+        // Save to database
+        await newContestant.save();
 
         return res.status(201).json({
             success: true,
-            data: contestant
+            message: 'Contestant created successfully',
+            data: newContestant,
         });
     } catch (error) {
-        console.error('Error registering contestant:', error);
-        return res.status(500).json({ message: 'Server error while registering contestant' });
+        console.error('Error creating contestant:', error);
+
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map((err) => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: messages,
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while creating contestant',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * @desc    Update contestant (Admin only)
+ * @route   PUT /api/contestants/:id
+ * @access  Private/Admin
+ */
+exports.updateContestant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid contestant ID format',
+            });
+        }
+
+        // Find and update contestant
+        const updatedContestant = await Contestant.findByIdAndUpdate(id, updateData, {
+            new: true,
+            runValidators: true,
+        });
+
+        if (!updatedContestant) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contestant not found',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Contestant updated successfully',
+            data: updatedContestant,
+        });
+    } catch (error) {
+        console.error('Error updating contestant:', error);
+
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map((err) => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: messages,
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while updating contestant',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * @desc    Delete contestant (Admin only)
+ * @route   DELETE /api/contestants/:id
+ * @access  Private/Admin
+ */
+exports.deleteContestant = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid contestant ID format',
+            });
+        }
+
+        // Find and delete contestant
+        const deletedContestant = await Contestant.findByIdAndDelete(id);
+
+        if (!deletedContestant) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contestant not found',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Contestant deleted successfully',
+            data: deletedContestant,
+        });
+    } catch (error) {
+        console.error('Error deleting contestant:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while deleting contestant',
+            error: error.message,
+        });
     }
 };

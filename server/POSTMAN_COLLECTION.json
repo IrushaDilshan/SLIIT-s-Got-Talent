@@ -1,0 +1,359 @@
+{
+  "info": {
+    "name": "Judge Scoring Dashboard API",
+    "description": "SLIIT Got Talent 2026 - Judge Scoring Dashboard Endpoints",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login Judge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.smith@judging.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email and password to get JWT token"
+          }
+        },
+        {
+          "name": "Register Judge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Emma Wilson\",\n  \"email\": \"emma.wilson@judging.com\",\n  \"password\": \"SecurePass123!\",\n  \"panel\": \"Panel C\",\n  \"photo\": \"https://via.placeholder.com/150/FFA500/FFFFFF?text=Emma\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/register",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new judge (admin can do this)"
+          }
+        },
+        {
+          "name": "Get Judge Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/auth/profile",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "profile"]
+            },
+            "description": "Get logged-in judge's profile (requires token)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contestants",
+      "item": [
+        {
+          "name": "Get All Contestants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/contestants?round=Preliminary&status=pending&limit=100",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "contestants"],
+              "query": [
+                {
+                  "key": "round",
+                  "value": "Preliminary"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Get all contestants, optionally filtered by round and status"
+          }
+        },
+        {
+          "name": "Get Single Contestant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/contestants/{{contestantId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "contestants", "{{contestantId}}"]
+            },
+            "description": "Get single contestant by ID"
+          }
+        },
+        {
+          "name": "Create Contestant (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Contestant\",\n  \"category\": \"Dance\",\n  \"round\": \"Preliminary\",\n  \"performanceTitle\": \"Amazing Performance\",\n  \"photo\": \"https://via.placeholder.com/300x400\",\n  \"timeSlot\": \"12:00 PM\",\n  \"status\": \"pending\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/contestants",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "contestants"]
+            },
+            "description": "Create a new contestant (admin only)"
+          }
+        },
+        {
+          "name": "Update Contestant (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"performed\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/contestants/{{contestantId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "contestants", "{{contestantId}}"]
+            },
+            "description": "Update contestant details (admin only)"
+          }
+        },
+        {
+          "name": "Delete Contestant (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/contestants/{{contestantId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "contestants", "{{contestantId}}"]
+            },
+            "description": "Delete a contestant (admin only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Judge Scores",
+      "item": [
+        {
+          "name": "Submit Judge Score",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contestantId\": \"{{contestantId}}\",\n  \"creativity\": 20,\n  \"presentation\": 22,\n  \"skillLevel\": 23,\n  \"audienceImpact\": 21\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/scores/submit",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "scores", "submit"]
+            },
+            "description": "Submit a judge score for a contestant. All criteria must be provided (0-25). Total calculated by backend."
+          }
+        },
+        {
+          "name": "Get My Submitted Scores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/scores/my-scores?round=Preliminary&limit=50",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "scores", "my-scores"],
+              "query": [
+                {
+                  "key": "round",
+                  "value": "Preliminary"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get all scores submitted by the logged-in judge"
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/scores/leaderboard?round=Preliminary&limit=50",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "scores", "leaderboard"],
+              "query": [
+                {
+                  "key": "round",
+                  "value": "Preliminary"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get leaderboard with contestants ranked by average judge score"
+          }
+        },
+        {
+          "name": "Get Single Score",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/scores/{{scoreId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "scores", "{{scoreId}}"]
+            },
+            "description": "Get details of a single judge score"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000"
+        },
+        "description": "Check if backend is running"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "contestantId",
+      "value": "CONTESTANT_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "scoreId",
+      "value": "SCORE_ID_HERE",
+      "type": "string"
+    }
+  ]
+}

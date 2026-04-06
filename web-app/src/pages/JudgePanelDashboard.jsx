@@ -96,23 +96,36 @@ const JudgePanelDashboard = () => {
   };
 
   const handleSubmit = (contestant) => {
+    const currentScores = scores[contestant.id] || {};
+
+    if (
+      currentScores.creativity === undefined ||
+      currentScores.presentation === undefined ||
+      currentScores.skillLevel === undefined ||
+      currentScores.audienceImpact === undefined
+    ) {
+      setMessage("Please complete all criteria before submitting.");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+
     const judgeTotal = calculateJudgeTotal(contestant.id);
     const result = {
       judgeId: loggedInJudge.id,
       contestantId: contestant.id,
       judgeScore: judgeTotal,
-      criteria: scores[contestant.id] || {},
+      criteria: currentScores,
     };
 
     setSubmittedResults((prev) => ({ ...prev, [contestant.id]: result }));
     setMessage(`✅ Score submitted for ${contestant.name}: ${judgeTotal}/100`);
-    
+
     // Auto-select next contestant
-    const currentIndex = filteredContestants.findIndex(c => c.id === contestant.id);
+    const currentIndex = filteredContestants.findIndex((c) => c.id === contestant.id);
     if (currentIndex < filteredContestants.length - 1) {
       setTimeout(() => setActiveContestantId(filteredContestants[currentIndex + 1].id), 1500);
     }
-    
+
     setTimeout(() => setMessage(""), 4000);
   };
 
@@ -219,12 +232,16 @@ const JudgePanelDashboard = () => {
                 <div>
                   <span style={styles.categoryBadge}>{activeContestant.category}</span>
                   <h2 style={styles.focusName}>{activeContestant.name}</h2>
-                  <p style={styles.focusPerformance}>"{activeContestant.performanceTitle}" • {activeContestant.timeSlot}</p>
+                  <p style={styles.focusPerformance}>
+                    "{activeContestant.performanceTitle}" • {activeContestant.timeSlot}
+                  </p>
                 </div>
               </div>
               <div style={styles.focusTotalBox}>
                 <span style={styles.totalLabel}>Total Score</span>
-                <span style={{...styles.totalValue, color: isSubmitted ? "#50ffa3" : "#fff"}}>{activeTotal}</span>
+                <span style={{ ...styles.totalValue, color: isSubmitted ? "#50ffa3" : "#fff" }}>
+                  {activeTotal}
+                </span>
                 <span style={styles.totalMax}>/100</span>
               </div>
             </div>
@@ -239,9 +256,11 @@ const JudgePanelDashboard = () => {
                         <h4 style={styles.critLabel}>{criterion.label}</h4>
                         <p style={styles.critHelper}>{criterion.helper}</p>
                       </div>
-                      <div style={styles.critScoreBadge}>{val} / {criterion.max}</div>
+                      <div style={styles.critScoreBadge}>
+                        {val} / {criterion.max}
+                      </div>
                     </div>
-                    
+
                     <input
                       type="range"
                       min="0"
@@ -251,13 +270,13 @@ const JudgePanelDashboard = () => {
                       onChange={(e) => handleScoreChange(activeContestant.id, criterion.key, e.target.value)}
                       style={styles.rangeLarge}
                     />
-                    
+
                     {/* Quick Buttons for faster scoring */}
                     {!isSubmitted && (
                       <div style={styles.quickButtons}>
-                        {[10, 15, 20, 25].map(num => (
-                          <button 
-                            key={num} 
+                        {[10, 15, 20, 25].map((num) => (
+                          <button
+                            key={num}
                             onClick={() => handleScoreChange(activeContestant.id, criterion.key, num)}
                             style={val === num ? styles.quickBtnActive : styles.quickBtn}
                           >
@@ -272,7 +291,7 @@ const JudgePanelDashboard = () => {
             </div>
 
             <div style={styles.actionArea}>
-              <button 
+              <button
                 style={isSubmitted ? styles.submittedBtn : styles.submitBtn}
                 onClick={() => handleSubmit(activeContestant)}
                 disabled={isSubmitted}
@@ -286,9 +305,9 @@ const JudgePanelDashboard = () => {
           <div>
             <h3 style={styles.queueTitle}>Up Next / Other Contestants</h3>
             <div style={styles.queueGrid}>
-              {filteredContestants.map(c => (
-                <div 
-                  key={c.id} 
+              {filteredContestants.map((c) => (
+                <div
+                  key={c.id}
                   onClick={() => setActiveContestantId(c.id)}
                   style={{
                     ...styles.queueCard,
@@ -322,86 +341,352 @@ const glass = {
 };
 
 const styles = {
-  page: { minHeight: "100vh", background: "linear-gradient(135deg, #070B19 0%, #111832 50%, #0F1322 100%)", color: "#ffffff", fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif", position: "relative", padding: "30px", overflowX: "hidden" },
-  bgOrbOne: { position: "absolute", top: "-10%", right: "10%", width: "40vw", height: "40vw", background: "radial-gradient(circle, rgba(111,76,255,0.15) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
-  bgOrbTwo: { position: "absolute", bottom: "-10%", left: "-10%", width: "50vw", height: "50vw", background: "radial-gradient(circle, rgba(35,201,255,0.1) 0%, rgba(0,0,0,0) 70%)", zIndex: 0, pointerEvents: "none" },
-  toast: { position: "fixed", top: "20px", left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg, #12b86d, #0ba35c)", padding: "12px 24px", borderRadius: "30px", fontWeight: "bold", zIndex: 100, boxShadow: "0 10px 30px rgba(18, 184, 109, 0.3)", animation: "fadeIn 0.3s ease" },
-  shell: { maxWidth: "1400px", margin: "0 auto", display: "grid", gridTemplateColumns: "300px 1fr", gap: "30px", position: "relative", zIndex: 2 },
-  
-  sidebar: { ...glass, borderRadius: "24px", padding: "24px", height: "fit-content", position: "sticky", top: "30px" },
-  brandBox: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "30px" },
-  brandLogo: { width: "48px", height: "48px", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", background: "linear-gradient(135deg, #6f4cff, #23c9ff)", color: "#fff" },
+  page: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #070B19 0%, #111832 50%, #0F1322 100%)",
+    color: "#ffffff",
+    fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    position: "relative",
+    padding: "30px",
+    overflowX: "hidden"
+  },
+  bgOrbOne: {
+    position: "absolute",
+    top: "-10%",
+    right: "10%",
+    width: "40vw",
+    height: "40vw",
+    background: "radial-gradient(circle, rgba(111,76,255,0.15) 0%, rgba(0,0,0,0) 70%)",
+    zIndex: 0,
+    pointerEvents: "none"
+  },
+  bgOrbTwo: {
+    position: "absolute",
+    bottom: "-10%",
+    left: "-10%",
+    width: "50vw",
+    height: "50vw",
+    background: "radial-gradient(circle, rgba(35,201,255,0.1) 0%, rgba(0,0,0,0) 70%)",
+    zIndex: 0,
+    pointerEvents: "none"
+  },
+  toast: {
+    position: "fixed",
+    top: "20px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "linear-gradient(90deg, #12b86d, #0ba35c)",
+    padding: "12px 24px",
+    borderRadius: "30px",
+    fontWeight: "bold",
+    zIndex: 100,
+    boxShadow: "0 10px 30px rgba(18, 184, 109, 0.3)",
+    animation: "fadeIn 0.3s ease"
+  },
+  shell: {
+    maxWidth: "1400px",
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "300px 1fr",
+    gap: "30px",
+    position: "relative",
+    zIndex: 2
+  },
+
+  sidebar: {
+    ...glass,
+    borderRadius: "24px",
+    padding: "24px",
+    height: "fit-content",
+    position: "sticky",
+    top: "30px"
+  },
+  brandBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    marginBottom: "30px"
+  },
+  brandLogo: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "800",
+    background: "linear-gradient(135deg, #6f4cff, #23c9ff)",
+    color: "#fff"
+  },
   brandTitle: { margin: 0, fontSize: "20px", fontWeight: "800" },
   brandSub: { margin: "4px 0 0 0", color: "#8fb6ff", fontSize: "13px", fontWeight: "600" },
-  sidebarCard: { background: "rgba(255,255,255,0.03)", borderRadius: "16px", padding: "16px", marginBottom: "20px" },
+  sidebarCard: {
+    background: "rgba(255,255,255,0.03)",
+    borderRadius: "16px",
+    padding: "16px",
+    marginBottom: "20px"
+  },
   judgeProfileRow: { display: "flex", alignItems: "center", gap: "14px" },
-  
-  // Image styles added here 👇
-  profileAvatarLarge: { width: "50px", height: "50px", borderRadius: "14px", objectFit: "cover", flexShrink: 0, border: "2px solid rgba(255,255,255,0.1)" },
-  
+
+  profileAvatarLarge: {
+    width: "50px",
+    height: "50px",
+    borderRadius: "14px",
+    objectFit: "cover",
+    flexShrink: 0,
+    border: "2px solid rgba(255,255,255,0.1)"
+  },
+
   sidebarJudge: { margin: 0, fontSize: "16px", fontWeight: "700" },
   sidebarMutedSmall: { margin: "4px 0 0 0", color: "rgba(255,255,255,0.5)", fontSize: "12px" },
-  sidebarLabel: { margin: "0 0 16px 0", color: "#8fb6ff", fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px" },
+  sidebarLabel: {
+    margin: "0 0 16px 0",
+    color: "#8fb6ff",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "1px"
+  },
   leaderboardList: { display: "flex", flexDirection: "column", gap: "10px" },
-  leaderItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "rgba(0,0,0,0.2)", borderRadius: "12px" },
+  leaderItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "10px",
+    background: "rgba(0,0,0,0.2)",
+    borderRadius: "12px"
+  },
   leaderLeft: { display: "flex", alignItems: "center", gap: "10px" },
   rankText: { color: "#8fb6ff", fontSize: "12px", fontWeight: "bold", minWidth: "20px" },
-  
-  // Leaderboard photo style 👇
-  leaderPhoto: { width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 },
-  
+
+  leaderPhoto: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    objectFit: "cover",
+    flexShrink: 0
+  },
+
   leaderName: { fontSize: "14px", fontWeight: "600" },
   leaderScore: { color: "#23c9ff", fontSize: "16px" },
-  
+
   main: { display: "flex", flexDirection: "column", gap: "24px" },
-  
-  topbar: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px", marginBottom: "10px" },
-  eyebrowTitle: { margin: 0, color: "#8fb6ff", fontSize: "13px", letterSpacing: "1.5px", textTransform: "uppercase", fontWeight: "600" },
+
+  topbar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "20px",
+    marginBottom: "10px"
+  },
+  eyebrowTitle: {
+    margin: 0,
+    color: "#8fb6ff",
+    fontSize: "13px",
+    letterSpacing: "1.5px",
+    textTransform: "uppercase",
+    fontWeight: "600"
+  },
   mainTitle: { margin: "6px 0 0 0", fontSize: "32px", fontWeight: "800", letterSpacing: "-0.5px" },
-  sessionBadge: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 18px", background: "rgba(25, 45, 75, 0.6)", border: "1px solid rgba(40, 80, 130, 0.5)", borderRadius: "30px", color: "#aed4ff", fontSize: "14px", fontWeight: "600" },
-  statusDot: { width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#50ffa3", boxShadow: "0 0 10px rgba(80, 255, 163, 0.6)" },
+  sessionBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "8px 18px",
+    background: "rgba(25, 45, 75, 0.6)",
+    border: "1px solid rgba(40, 80, 130, 0.5)",
+    borderRadius: "30px",
+    color: "#aed4ff",
+    fontSize: "14px",
+    fontWeight: "600"
+  },
+  statusDot: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    backgroundColor: "#50ffa3",
+    boxShadow: "0 0 10px rgba(80, 255, 163, 0.6)"
+  },
 
   filterBar: { display: "flex", gap: "12px", marginBottom: "10px" },
-  input: { flex: 1, maxWidth: "350px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff" },
-  select: { width: "180px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff" },
-  
+  input: {
+    flex: 1,
+    maxWidth: "350px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff"
+  },
+  select: {
+    width: "180px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff"
+  },
+
   focusCard: { ...glass, borderRadius: "24px", padding: "30px", borderTop: "4px solid #6f4cff" },
-  focusHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", flexWrap: "wrap", gap: "20px" },
+  focusHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "30px",
+    flexWrap: "wrap",
+    gap: "20px"
+  },
   focusProfile: { display: "flex", alignItems: "center", gap: "20px" },
-  
-  // Huge photo style for focus area 👇
-  avatarHuge: { width: "86px", height: "86px", borderRadius: "20px", objectFit: "cover", flexShrink: 0, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" },
-  
-  categoryBadge: { display: "inline-block", background: "rgba(35, 201, 255, 0.15)", color: "#23c9ff", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "bold", marginBottom: "8px" },
+
+  avatarHuge: {
+    width: "86px",
+    height: "86px",
+    borderRadius: "20px",
+    objectFit: "cover",
+    flexShrink: 0,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.4)"
+  },
+
+  categoryBadge: {
+    display: "inline-block",
+    background: "rgba(35, 201, 255, 0.15)",
+    color: "#23c9ff",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: "bold",
+    marginBottom: "8px"
+  },
   focusName: { margin: 0, fontSize: "26px", fontWeight: "800" },
   focusPerformance: { margin: "6px 0 0 0", color: "rgba(255,255,255,0.6)", fontSize: "15px" },
-  focusTotalBox: { background: "rgba(0,0,0,0.3)", padding: "16px 24px", borderRadius: "16px", textAlign: "right" },
-  totalLabel: { display: "block", fontSize: "12px", color: "#8fb6ff", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" },
+  focusTotalBox: {
+    background: "rgba(0,0,0,0.3)",
+    padding: "16px 24px",
+    borderRadius: "16px",
+    textAlign: "right"
+  },
+  totalLabel: {
+    display: "block",
+    fontSize: "12px",
+    color: "#8fb6ff",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+    marginBottom: "4px"
+  },
   totalValue: { fontSize: "36px", fontWeight: "900" },
   totalMax: { fontSize: "18px", color: "rgba(255,255,255,0.4)" },
-  criteriaGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px", marginBottom: "30px" },
-  criterionBox: { background: "rgba(255,255,255,0.03)", borderRadius: "16px", padding: "20px", border: "1px solid rgba(255,255,255,0.05)" },
+  criteriaGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "24px",
+    marginBottom: "30px"
+  },
+  criterionBox: {
+    background: "rgba(255,255,255,0.03)",
+    borderRadius: "16px",
+    padding: "20px",
+    border: "1px solid rgba(255,255,255,0.05)"
+  },
   critTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" },
   critLabel: { margin: 0, fontSize: "16px", fontWeight: "700" },
   critHelper: { margin: "4px 0 0 0", fontSize: "12px", color: "rgba(255,255,255,0.5)" },
-  critScoreBadge: { background: "rgba(111,76,255,0.2)", color: "#dbe0ff", padding: "6px 12px", borderRadius: "8px", fontWeight: "bold", fontSize: "14px" },
-  rangeLarge: { width: "100%", height: "6px", borderRadius: "4px", accentColor: "#23c9ff", cursor: "pointer", marginBottom: "16px" },
+  critScoreBadge: {
+    background: "rgba(111,76,255,0.2)",
+    color: "#dbe0ff",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    fontWeight: "bold",
+    fontSize: "14px"
+  },
+  rangeLarge: {
+    width: "100%",
+    height: "6px",
+    borderRadius: "4px",
+    accentColor: "#23c9ff",
+    cursor: "pointer",
+    marginBottom: "16px"
+  },
   quickButtons: { display: "flex", gap: "8px" },
-  quickBtn: { flex: 1, padding: "8px 0", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", color: "#fff", cursor: "pointer", transition: "0.2s" },
-  quickBtnActive: { flex: 1, padding: "8px 0", background: "#6f4cff", border: "1px solid #6f4cff", borderRadius: "8px", color: "#fff", cursor: "pointer", fontWeight: "bold" },
+  quickBtn: {
+    flex: 1,
+    padding: "8px 0",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    color: "#fff",
+    cursor: "pointer",
+    transition: "0.2s"
+  },
+  quickBtnActive: {
+    flex: 1,
+    padding: "8px 0",
+    background: "#6f4cff",
+    border: "1px solid #6f4cff",
+    borderRadius: "8px",
+    color: "#fff",
+    cursor: "pointer",
+    fontWeight: "bold"
+  },
   actionArea: { display: "flex", justifyContent: "flex-end" },
-  submitBtn: { background: "linear-gradient(135deg, #6f4cff, #23c9ff)", color: "#fff", border: "none", padding: "16px 32px", borderRadius: "12px", fontSize: "16px", fontWeight: "bold", cursor: "pointer", boxShadow: "0 10px 20px rgba(111,76,255,0.3)" },
-  submittedBtn: { background: "rgba(255,255,255,0.1)", color: "#50ffa3", border: "1px solid rgba(80,255,163,0.3)", padding: "16px 32px", borderRadius: "12px", fontSize: "16px", fontWeight: "bold", cursor: "not-allowed" },
+  submitBtn: {
+    background: "linear-gradient(135deg, #6f4cff, #23c9ff)",
+    color: "#fff",
+    border: "none",
+    padding: "16px 32px",
+    borderRadius: "12px",
+    fontSize: "16px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    boxShadow: "0 10px 20px rgba(111,76,255,0.3)"
+  },
+  submittedBtn: {
+    background: "rgba(255,255,255,0.1)",
+    color: "#50ffa3",
+    border: "1px solid rgba(80,255,163,0.3)",
+    padding: "16px 32px",
+    borderRadius: "12px",
+    fontSize: "16px",
+    fontWeight: "bold",
+    cursor: "not-allowed"
+  },
   queueTitle: { margin: "10px 0 16px 0", fontSize: "18px", fontWeight: "700" },
   queueGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" },
-  queueCard: { display: "flex", alignItems: "center", gap: "12px", padding: "12px", borderRadius: "16px", border: "1px solid", cursor: "pointer", transition: "all 0.2s ease", position: "relative" },
-  
-  // Queue profile photo style 👇
-  queueAvatar: { width: "42px", height: "42px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 },
-  
+  queueCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px",
+    borderRadius: "16px",
+    border: "1px solid",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    position: "relative"
+  },
+
+  queueAvatar: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "12px",
+    objectFit: "cover",
+    flexShrink: 0
+  },
+
   queueName: { margin: 0, fontSize: "14px", fontWeight: "700" },
   queueSub: { margin: "2px 0 0 0", fontSize: "12px", color: "rgba(255,255,255,0.5)" },
-  checkIcon: { position: "absolute", right: "12px", background: "#12b86d", color: "#fff", width: "20px", height: "20px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }
+  checkIcon: {
+    position: "absolute",
+    right: "12px",
+    background: "#12b86d",
+    color: "#fff",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "10px",
+    fontWeight: "bold"
+  }
 };
 
 export default JudgePanelDashboard;

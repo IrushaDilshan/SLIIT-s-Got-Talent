@@ -1,11 +1,16 @@
 {
-  "name": "sliit-got-talent-server",
+  "name": "judge-scoring-backend",
   "version": "1.0.0",
+  "description": "SLIIT Got Talent 2026 - Judge Scoring Dashboard Backend",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "seed": "node scripts/seed.js"
   },
+  "keywords": ["talent", "judging", "scoring", "express", "mongodb"],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -13,8 +18,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.6.3",
-    "node-fetch": "^2.7.0",
-    "nodemailer": "^8.0.1"
+    "joi": "^17.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
