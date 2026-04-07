@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { getApiBaseUrl } from '../services/apiClient.js';
+import { toServerAssetUrl } from '../services/apiClient.js';
 
 const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
 
@@ -15,16 +15,6 @@ function normalizeCategory(value) {
   if (raw === 'magic') return 'Magic';
   if (raw === 'other') return 'Other';
   return value;
-}
-
-function toServerAssetUrl(assetPath) {
-  if (!assetPath) return null;
-  if (/^https?:\/\//i.test(assetPath)) return assetPath;
-
-  const apiBase = getApiBaseUrl();
-  const serverBase = apiBase.replace(/\/api\/?$/, '');
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  return `${serverBase}${normalizedPath}`;
 }
 
 function youtubeThumb(url) {
@@ -221,23 +211,7 @@ export default function VotePage() {
 
         /* Premium Contestant Card */
         .contestant-grid {
-          display: flex; flex-wrap: wrap; justify-content: center; gap: 35px;
-        }
-        .premium-card {
-          width: 340px; max-width: 100%; flex-shrink: 0;
-          background: linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(15, 15, 20, 0.9));
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;
-          position: relative; z-index: 1;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        .premium-card::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-          border-radius: 24px; point-events: none;
-          background: linear-gradient(45deg, rgba(253, 93, 115, 0), rgba(253, 93, 115, 0.08), rgba(253, 93, 115, 0));
-          z-index: -1; opacity: 0; transition: opacity 0.5s ease;
+
         }
         .premium-card:hover {
           transform: translateY(-10px) scale(1.02);
