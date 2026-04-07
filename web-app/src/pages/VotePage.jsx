@@ -211,8 +211,38 @@ export default function VotePage() {
 
         /* Premium Contestant Card */
         .contestant-grid {
-
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 40px;
+          margin-top: 40px;
         }
+        
+        .premium-card {
+          background: rgba(15, 15, 20, 0.7);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 24px;
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1);
+        }
+        
+        .premium-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 50% 0%, rgba(253, 93, 115, 0.15), transparent 70%);
+          opacity: 0;
+          transition: opacity 0.5s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+
         .premium-card:hover {
           transform: translateY(-10px) scale(1.02);
           border-color: rgba(253, 93, 115, 0.4);
