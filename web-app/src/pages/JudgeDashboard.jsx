@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.jsx';
-import { api } from '../services/apiClient.js';
+import { api, toServerAssetUrl } from '../services/apiClient.js';
 import JudgePanelDashboard from './JudgePanelDashboard.jsx';
 
 export default function JudgeDashboard() {
@@ -116,7 +116,7 @@ export default function JudgeDashboard() {
                     <div style={styles.cardHeader}>
                       <div style={styles.avatarSection}>
                         {cont.imageUrl ? (
-                          <img src={cont.imageUrl} alt={cont.name} style={styles.avatarImage} />
+                          <img src={toServerAssetUrl(cont.imageUrl)} alt={cont.name} style={styles.avatarImage} />
                         ) : (
                           <div style={styles.avatarPlaceholder}>{cont.name.charAt(0)}</div>
                         )}

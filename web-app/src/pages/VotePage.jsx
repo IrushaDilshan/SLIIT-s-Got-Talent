@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { getApiBaseUrl } from '../services/apiClient.js';
+import { toServerAssetUrl } from '../services/apiClient.js';
 
 const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
 
@@ -15,16 +15,6 @@ function normalizeCategory(value) {
   if (raw === 'magic') return 'Magic';
   if (raw === 'other') return 'Other';
   return value;
-}
-
-function toServerAssetUrl(assetPath) {
-  if (!assetPath) return null;
-  if (/^https?:\/\//i.test(assetPath)) return assetPath;
-
-  const apiBase = getApiBaseUrl();
-  const serverBase = apiBase.replace(/\/api\/?$/, '');
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  return `${serverBase}${normalizedPath}`;
 }
 
 function youtubeThumb(url) {
