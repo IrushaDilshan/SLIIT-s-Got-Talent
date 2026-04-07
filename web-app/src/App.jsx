@@ -15,7 +15,7 @@ import CategoriesPage from './pages/CategoriesPage.jsx';
 import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
-
+import ReviewPage from './pages/ReviewPage.jsx';
 
 export default function App() {
   return (
@@ -23,8 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-
-        />
+        <Route path="/register" element={<RegisterPage />} />
 
         <Route
           path="/vote"
