@@ -2,6 +2,30 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../services/apiClient.js';
+
+const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
+
+function normalizeCategory(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'acting(drama)' || raw === 'acting (drama)') return 'Acting (Drama)';
+  if (raw === 'singing') return 'Singing';
+  if (raw === 'dancing') return 'Dancing';
+  if (raw === 'music') return 'Music';
+  if (raw === 'magic') return 'Magic';
+  if (raw === 'other') return 'Other';
+  return value;
+}
+
+function toServerAssetUrl(assetPath) {
+  if (!assetPath) return null;
+  if (/^https?:\/\//i.test(assetPath)) return assetPath;
+
+  const apiBase = getApiBaseUrl();
+  const serverBase = apiBase.replace(/\/api\/?$/, '');
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  return `${serverBase}${normalizedPath}`;
+}
 
 function youtubeThumb(url) {
   if (!url) return null;
@@ -54,24 +78,25 @@ export default function VotePage() {
   }
 
   const groupedData = useMemo(() => contestants.reduce((acc, current) => {
-    const category = current.talentType || 'Uncategorized';
+    const category = normalizeCategory(current.talentType) || 'Uncategorized';
     if (!acc[category]) acc[category] = [];
     acc[category].push(current);
     return acc;
   }, {}), [contestants]);
 
-  const categories = useMemo(() => ['All', ...Object.keys(groupedData).sort()], [groupedData]);
+  const categories = CATEGORY_BUTTONS;
   
   const filteredContestants = useMemo(() => activeCategory === 'All' 
     ? contestants 
-    : groupedData[activeCategory] || [], [activeCategory, contestants, groupedData]);
+    : contestants.filter((c) => normalizeCategory(c.talentType) === activeCategory), [activeCategory, contestants]);
 
   const cards = useMemo(() => {
     const votedCategories = user?.votedCategories || [];
     const votedContestants = user?.votedContestants || [];
 
     return filteredContestants.map((c) => {
-      const thumb = youtubeThumb(c.videoUrl);
+      const imagePreview = toServerAssetUrl(c.imageUrl);
+      const thumb = imagePreview || youtubeThumb(c.videoUrl);
       const isVotedForThisContestant = votedContestants.includes(c._id);
       const hasVotedInCategory = votedCategories.includes(c.talentType);
       

@@ -15,13 +15,14 @@ async function parseJson(res) {
 
 export async function request({ method, path, token, body }) {
   const base = getApiBaseUrl();
-  const headers = { 'Content-Type': 'application/json' };
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${base}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: !body ? undefined : isFormData ? body : JSON.stringify(body)
   });
 
   const data = await parseJson(res);
