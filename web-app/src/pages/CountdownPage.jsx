@@ -138,6 +138,15 @@ export default function CountdownPage() {
                 type="datetime-local"
                 value={countdownEnd}
                 onChange={(e) => setCountdownEnd(e.target.value)}
+                onClick={(e) => {
+                  try {
+                    if (e.target.showPicker) {
+                      e.target.showPicker();
+                    }
+                  } catch (err) {
+                    console.log(err);
+                  }
+                }}
                 style={styles.inputField}
               />
             </div>

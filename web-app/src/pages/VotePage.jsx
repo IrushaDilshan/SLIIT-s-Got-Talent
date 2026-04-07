@@ -4,17 +4,22 @@ import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { toServerAssetUrl } from '../services/apiClient.js';
 
-const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
-
 function normalizeCategory(value) {
-  const raw = String(value || '').trim().toLowerCase();
+  if (!value) return value;
+  const raw = String(value).trim().toLowerCase();
   if (raw === 'acting(drama)' || raw === 'acting (drama)') return 'Acting (Drama)';
   if (raw === 'singing') return 'Singing';
-  if (raw === 'dancing') return 'Dancing';
+  if (raw === 'dancing' || raw === 'dansing') return 'Dancing';
   if (raw === 'music') return 'Music';
   if (raw === 'magic') return 'Magic';
   if (raw === 'other') return 'Other';
-  return value;
+  return value; // fallback to original casing if unknown but keep it as is
+}
+
+function normalizeTabCategory(value) {
+  if (!value) return value;
+  // Just uppercase first letter of the exact string from settings to keep it simple, or use as is
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
 function youtubeThumb(url) {
@@ -30,6 +35,7 @@ export default function VotePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [contestants, setContestants] = useState([]);
+  const [categories, setCategories] = useState(['All']);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -44,19 +50,31 @@ export default function VotePage() {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    async function loadData() {
       setLoading(true);
       setError('');
       try {
-        const data = await api.get({ path: '/contestants', token });
-        if (!cancelled) setContestants(Array.isArray(data) ? data : []);
+        const [settingsData, contestantsData] = await Promise.all([
+          api.get({ path: '/settings' }).catch(() => ({})),
+          api.get({ path: '/contestants', token })
+        ]);
+        
+        if (!cancelled) {
+          if (settingsData && settingsData.categories) {
+            setCategories(['All', ...settingsData.categories]);
+          } else {
+             // Fallback
+             setCategories(['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other']);
+          }
+          setContestants(Array.isArray(contestantsData) ? contestantsData : []);
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to load contestants');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+    loadData();
     return () => {
       cancelled = true;
     };
@@ -73,12 +91,13 @@ export default function VotePage() {
     acc[category].push(current);
     return acc;
   }, {}), [contestants]);
-
-  const categories = CATEGORY_BUTTONS;
   
   const filteredContestants = useMemo(() => activeCategory === 'All' 
     ? contestants 
-    : contestants.filter((c) => normalizeCategory(c.talentType) === activeCategory), [activeCategory, contestants]);
+    : contestants.filter((c) => {
+        // Make insensitive comparison because the DB might have "singing" and Category might be "Singing"
+        return String(c.talentType || '').toLowerCase() === String(activeCategory).toLowerCase() || normalizeCategory(c.talentType) === activeCategory;
+      }), [activeCategory, contestants]);
 
   const cards = useMemo(() => {
     const votedCategories = user?.votedCategories || [];
@@ -379,10 +398,10 @@ export default function VotePage() {
               {categories.map(cat => (
                 <button
                   key={cat}
-                  onClick={() => setActiveCategory(cat)}
                   className={`filter-tab ${activeCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat)}
                 >
-                  {cat}
+                  {normalizeTabCategory(cat)}
                 </button>
               ))}
             </div>
