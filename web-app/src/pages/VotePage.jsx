@@ -2,29 +2,24 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { getApiBaseUrl } from '../services/apiClient.js';
-
-const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
+import { toServerAssetUrl } from '../services/apiClient.js';
 
 function normalizeCategory(value) {
-  const raw = String(value || '').trim().toLowerCase();
+  if (!value) return value;
+  const raw = String(value).trim().toLowerCase();
   if (raw === 'acting(drama)' || raw === 'acting (drama)') return 'Acting (Drama)';
   if (raw === 'singing') return 'Singing';
-  if (raw === 'dancing') return 'Dancing';
+  if (raw === 'dancing' || raw === 'dansing') return 'Dancing';
   if (raw === 'music') return 'Music';
   if (raw === 'magic') return 'Magic';
   if (raw === 'other') return 'Other';
-  return value;
+  return value; // fallback to original casing if unknown but keep it as is
 }
 
-function toServerAssetUrl(assetPath) {
-  if (!assetPath) return null;
-  if (/^https?:\/\//i.test(assetPath)) return assetPath;
-
-  const apiBase = getApiBaseUrl();
-  const serverBase = apiBase.replace(/\/api\/?$/, '');
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  return `${serverBase}${normalizedPath}`;
+function normalizeTabCategory(value) {
+  if (!value) return value;
+  // Just uppercase first letter of the exact string from settings to keep it simple, or use as is
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
 function youtubeThumb(url) {
@@ -40,6 +35,7 @@ export default function VotePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [contestants, setContestants] = useState([]);
+  const [categories, setCategories] = useState(['All']);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -54,19 +50,31 @@ export default function VotePage() {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    async function loadData() {
       setLoading(true);
       setError('');
       try {
-        const data = await api.get({ path: '/contestants', token });
-        if (!cancelled) setContestants(Array.isArray(data) ? data : []);
+        const [settingsData, contestantsData] = await Promise.all([
+          api.get({ path: '/settings' }).catch(() => ({})),
+          api.get({ path: '/contestants', token })
+        ]);
+        
+        if (!cancelled) {
+          if (settingsData && settingsData.categories) {
+            setCategories(['All', ...settingsData.categories]);
+          } else {
+             // Fallback
+             setCategories(['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other']);
+          }
+          setContestants(Array.isArray(contestantsData) ? contestantsData : []);
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to load contestants');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+    loadData();
     return () => {
       cancelled = true;
     };
@@ -83,12 +91,13 @@ export default function VotePage() {
     acc[category].push(current);
     return acc;
   }, {}), [contestants]);
-
-  const categories = CATEGORY_BUTTONS;
   
   const filteredContestants = useMemo(() => activeCategory === 'All' 
     ? contestants 
-    : contestants.filter((c) => normalizeCategory(c.talentType) === activeCategory), [activeCategory, contestants]);
+    : contestants.filter((c) => {
+        // Make insensitive comparison because the DB might have "singing" and Category might be "Singing"
+        return String(c.talentType || '').toLowerCase() === String(activeCategory).toLowerCase() || normalizeCategory(c.talentType) === activeCategory;
+      }), [activeCategory, contestants]);
 
   const cards = useMemo(() => {
     const votedCategories = user?.votedCategories || [];
@@ -221,24 +230,38 @@ export default function VotePage() {
 
         /* Premium Contestant Card */
         .contestant-grid {
-          display: flex; flex-wrap: wrap; justify-content: center; gap: 35px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 40px;
+          margin-top: 40px;
         }
+        
         .premium-card {
-          width: 340px; max-width: 100%; flex-shrink: 0;
-          background: linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(15, 15, 20, 0.9));
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;
-          position: relative; z-index: 1;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          background: rgba(15, 15, 20, 0.7);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 24px;
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1);
         }
+        
         .premium-card::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-          border-radius: 24px; point-events: none;
-          background: linear-gradient(45deg, rgba(253, 93, 115, 0), rgba(253, 93, 115, 0.08), rgba(253, 93, 115, 0));
-          z-index: -1; opacity: 0; transition: opacity 0.5s ease;
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 50% 0%, rgba(253, 93, 115, 0.15), transparent 70%);
+          opacity: 0;
+          transition: opacity 0.5s ease;
+          pointer-events: none;
+          z-index: 1;
         }
+
         .premium-card:hover {
           transform: translateY(-10px) scale(1.02);
           border-color: rgba(253, 93, 115, 0.4);
@@ -375,10 +398,10 @@ export default function VotePage() {
               {categories.map(cat => (
                 <button
                   key={cat}
-                  onClick={() => setActiveCategory(cat)}
                   className={`filter-tab ${activeCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat)}
                 >
-                  {cat}
+                  {normalizeTabCategory(cat)}
                 </button>
               ))}
             </div>

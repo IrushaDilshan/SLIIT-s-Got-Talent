@@ -5,7 +5,6 @@ import { useAuth } from '../components/AuthContext.jsx';
 
 const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
-const FIXED_CATEGORIES = ['Singing', 'Dancing', 'Acting(Drama)', 'Music', 'Magic', 'Other'];
 const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const SEMESTER_OPTIONS = ['1st Semester', '2nd Semester'];
 
@@ -60,7 +59,7 @@ export default function RegisterPage() {
   });
 
   
-  const [categories] = useState(FIXED_CATEGORIES);
+  const [categories, setCategories] = useState(['Singing', 'Dancing', 'Other']);
   const [years] = useState(YEAR_OPTIONS);
   const [semesters] = useState(SEMESTER_OPTIONS);
   const [loading, setLoading] = useState(false);
@@ -72,6 +71,20 @@ export default function RegisterPage() {
   const [videoPreview, setVideoPreview] = useState('');
   const [fileError, setFileError] = useState('');
   const [checkingApplication, setCheckingApplication] = useState(true);
+
+  useEffect(() => {
+    const fetchSettingsCategories = async () => {
+      try {
+        const data = await api.get({ path: '/settings' });
+        if (data && data.categories && data.categories.length > 0) {
+          setCategories(data.categories);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories', err);
+      }
+    };
+    fetchSettingsCategories();
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });

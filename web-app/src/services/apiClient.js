@@ -4,6 +4,24 @@ export function getApiBaseUrl() {
   return import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE;
 }
 
+export function getServerOrigin() {
+  const apiBase = getApiBaseUrl();
+
+  try {
+    return new URL(apiBase, window.location.origin).origin;
+  } catch {
+    return window.location.origin;
+  }
+}
+
+export function toServerAssetUrl(assetPath) {
+  if (!assetPath) return null;
+  if (/^https?:\/\//i.test(assetPath)) return assetPath;
+
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  return `${getServerOrigin()}${normalizedPath}`;
+}
+
 async function parseJson(res) {
   const text = await res.text();
   try {

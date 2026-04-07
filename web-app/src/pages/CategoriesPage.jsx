@@ -68,7 +68,7 @@ export default function CategoriesPage() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <div>
+        <div style={{ flex: 1 }}>
           <h2 style={styles.pageTitle}>Manage Categories</h2>
           <p style={styles.pageSubtitle}>Add, review or remove the talent categories for your events.</p>
         </div>
@@ -164,27 +164,63 @@ export default function CategoriesPage() {
 }
 
 const styles = {
-  container: { maxWidth: '900px', margin: '0 auto', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif' },
-  header: { marginBottom: '2.5rem' },
-  pageTitle: { fontSize: '2.2rem', fontWeight: '800', margin: '0 0 0.5rem 0', background: 'linear-gradient(135deg, #e94560, #ff7b8f)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' },
-  pageSubtitle: { fontSize: '1rem', color: '#94a3b8', margin: 0 },
+  container: {
+    padding: '2rem',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    color: '#f8fafc',
+  },
+  header: {
+    background: 'rgba(15, 23, 42, 0.6)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '24px',
+    padding: '2rem',
+    marginBottom: '2rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+  },
+  pageTitle: {
+    fontSize: '2.5rem',
+    fontWeight: '800',
+    margin: '0 0 0.5rem 0',
+    background: 'linear-gradient(135deg, #FD5D73 0%, #E11D48 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    letterSpacing: '-0.02em',
+  },
+  pageSubtitle: {
+    color: '#94a3b8',
+    fontSize: '1rem',
+    margin: 0,
+    fontWeight: '400',
+  },
   
   cardTitle: { margin: '0 0 16px 0', fontSize: '1.2rem', fontWeight: '600', color: '#f1f5f9' },
   
   addCard: { 
-      backgroundColor: 'rgba(255, 255, 255, 0.02)', 
-      border: '1px solid rgba(255, 255, 255, 0.06)', 
-      borderRadius: '16px', 
-      padding: '24px 30px', 
+      background: 'rgba(30, 41, 59, 0.4)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '24px',
+      padding: '2rem',
       marginBottom: '24px',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' 
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
   },
   listCard: { 
-      backgroundColor: 'rgba(255, 255, 255, 0.02)', 
-      border: '1px solid rgba(255, 255, 255, 0.06)', 
-      borderRadius: '16px', 
-      padding: '24px 30px', 
-      minHeight: '300px'
+      background: 'rgba(30, 41, 59, 0.4)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '24px',
+      padding: '2rem',
+      minHeight: '300px',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
   },
   
   addCategoryForm: { display: 'flex', gap: '16px', flexWrap: 'wrap' },
@@ -194,7 +230,7 @@ const styles = {
       padding: '14px 16px 14px 44px', 
       backgroundColor: 'rgba(15, 23, 42, 0.6)', 
       border: '1px solid rgba(255, 255, 255, 0.1)', 
-      borderRadius: '10px', 
+      borderRadius: '12px', 
       color: '#fff', 
       fontSize: '1rem', 
       outline: 'none', 
@@ -204,15 +240,15 @@ const styles = {
   
   actionBtn: { 
       padding: '14px 28px', 
-      background: 'linear-gradient(135deg, #e94560, #dc2f4b)', 
+      background: 'linear-gradient(135deg, #FD5D73 0%, #E11D48 100%)', 
       color: '#fff', 
       border: 'none', 
-      borderRadius: '10px', 
+      borderRadius: '12px', 
       fontSize: '1rem', 
       fontWeight: '600', 
       cursor: 'pointer',
       transition: 'transform 0.2s, box-shadow 0.2s',
-      boxShadow: '0 4px 12px rgba(233, 69, 96, 0.3)'
+      boxShadow: '0 4px 12px rgba(225, 29, 72, 0.3)'
   },
   
   categoryList: { width: '100%' },
@@ -221,17 +257,19 @@ const styles = {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'space-between',
-      backgroundColor: 'rgba(30, 41, 59, 0.4)', 
+      backgroundColor: 'rgba(15, 23, 42, 0.4)', 
       border: '1px solid rgba(255, 255, 255, 0.05)', 
       padding: '16px 20px', 
-      borderRadius: '12px',
-      transition: 'background-color 0.2s, transform 0.2s'
+      borderRadius: '16px',
+      transition: 'background-color 0.2s, transform 0.2s',
+      backdropFilter: 'blur(10px)',
   },
   categoryInfo: { display: 'flex', alignItems: 'center', gap: '16px' },
   iconBox: {
-      width: '40px', height: '40px', borderRadius: '10px', 
-      background: 'rgba(233, 69, 96, 0.15)', color: '#e94560', 
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
+      width: '44px', height: '44px', borderRadius: '12px', 
+      background: 'rgba(253, 93, 115, 0.15)', color: '#FD5D73', 
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: '1px solid rgba(253, 93, 115, 0.2)'
   },
   categoryNameText: { fontSize: '1.1rem', fontWeight: '500', color: '#f8fafc' },
   
@@ -241,7 +279,7 @@ const styles = {
       color: '#f43f5e', 
       cursor: 'pointer', 
       padding: '10px', 
-      borderRadius: '8px',
+      borderRadius: '10px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'background-color 0.2s'
   },

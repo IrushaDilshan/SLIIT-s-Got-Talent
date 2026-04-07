@@ -1,17 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.jsx';
-import { api, getApiBaseUrl } from '../services/apiClient.js';
-
-function toServerAssetUrl(assetPath) {
-  if (!assetPath) return null;
-  if (/^https?:\/\//i.test(assetPath)) return assetPath;
-
-  const apiBase = getApiBaseUrl();
-  const serverBase = apiBase.replace(/\/api\/?$/, '');
-  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
-  return `${serverBase}${normalizedPath}`;
-}
+import { api, toServerAssetUrl } from '../services/apiClient.js';
 
 export default function ReviewPage() {
   const { token } = useAuth();
