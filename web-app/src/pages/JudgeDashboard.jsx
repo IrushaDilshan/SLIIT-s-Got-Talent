@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../components/AuthContext.jsx';
+import { api } from '../services/apiClient.js';
+
+export default function JudgeDashboard() {
+  const { user, isAuthed, token } = useAuth();
   const [contestants, setContestants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,7 +22,7 @@ import React, { useState, useEffect } from 'react';
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/contestants');
+      const res = await api.get({ path: '/contestants', token });
       setContestants(res.data || []);
       setError(null);
     } catch (err) {
@@ -70,7 +76,18 @@ import React, { useState, useEffect } from 'react';
 
         {/* Main Content Area */}
         <main style={styles.mainContent}>
+          <header style={styles.topHeader}>
+            <h1 style={styles.pageTitle}>{activeTab}</h1>
+            <div style={styles.headerActions}>
+              <span style={styles.liveIndicator}>
+                <span style={styles.pulseDot}></span>
+                Live Event Active
+              </span>
+            </div>
+          </header>
 
+          <div style={styles.contentBody}>
+            {activeTab !== 'Dashboard' ? (
               <div style={styles.placeholderArea}>
                 <p>{activeTab} module is coming soon.</p>
               </div>
@@ -88,7 +105,7 @@ import React, { useState, useEffect } from 'react';
                     <div style={styles.cardHeader}>
                       <div style={styles.avatarSection}>
                         {cont.imageUrl ? (
-
+                          <img src={api.toServerAssetUrl?.(cont.imageUrl) || cont.imageUrl} alt={cont.name} style={styles.avatarImg} />
                         ) : (
                           <div style={styles.avatarPlaceholder}>{cont.name.charAt(0)}</div>
                         )}
@@ -104,7 +121,7 @@ import React, { useState, useEffect } from 'react';
                     </div>
                     
                     <div style={styles.cardFooter}>
-
+                      <button style={styles.evalBtn}>
                         Evaluate Performance
                       </button>
                     </div>

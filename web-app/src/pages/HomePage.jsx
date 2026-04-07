@@ -4,7 +4,7 @@ import { useAuth } from '../components/AuthContext.jsx';
 import { api } from '../services/apiClient.js';
 
 export function CountdownTimer() {
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [targetTime, setTargetTime] = useState(null);
 
   useEffect(() => {
@@ -27,12 +27,13 @@ export function CountdownTimer() {
       const diff = targetTime - now;
 
       if (diff <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         return;
       }
 
       setTimeLeft({
-        hours: Math.floor((diff / (1000 * 60 * 60))),
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
         minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
         seconds: Math.floor((diff % (1000 * 60)) / 1000)
       });
@@ -47,6 +48,12 @@ export function CountdownTimer() {
     <div className="countdown-widget">
       <div className="countdown-title">Time Remaining</div>
       <div className="countdown-values">
+        {timeLeft.days > 0 && (
+          <div className="time-box">
+            <span className="time-num">{String(timeLeft.days).padStart(2, '0')}</span>
+            <span className="time-label">Days</span>
+          </div>
+        )}
         <div className="time-box">
           <span className="time-num">{String(timeLeft.hours).padStart(2, '0')}</span>
           <span className="time-label">Hours</span>
