@@ -175,7 +175,7 @@ const styles = {
     fontSize: '2.5rem',
     fontWeight: '800',
     margin: '0 0 0.5rem 0',
-    background: 'linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 100%)',
+    background: 'linear-gradient(135deg, #FD5D73 0%, #E11D48 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     letterSpacing: '-0.02em',
@@ -213,8 +213,8 @@ const styles = {
     textAlign: 'left',
   },
   activeTabButton: {
-    background: 'rgba(99, 102, 241, 0.1)',
-    color: '#818cf8',
+    background: 'rgba(253, 93, 115, 0.1)',
+    color: '#FD5D73',
   },
   tabIcon: {
     fontSize: '1.25rem',
@@ -222,7 +222,7 @@ const styles = {
     display: 'flex',
   },
   activeTabIcon: {
-    color: '#818cf8',
+    color: '#FD5D73',
   },
   sidebarDivider: {
     height: '1px',
@@ -285,14 +285,14 @@ const styles = {
     width: '96px',
     height: '96px',
     borderRadius: '24px',
-    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+    background: 'linear-gradient(135deg, #FD5D73 0%, #E11D48 100%)',
     color: 'white',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '3rem',
     fontWeight: 'bold',
-    boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.4)',
+    boxShadow: '0 8px 16px -4px rgba(225, 29, 72, 0.4)',
   },
   userName: {
     fontSize: '1.75rem',
@@ -378,7 +378,7 @@ const styles = {
     width: '48px',
     height: '24px',
     borderRadius: '9999px',
-    background: '#6366f1',
+    background: '#FD5D73',
     position: 'relative',
     cursor: 'pointer',
     '::after': {

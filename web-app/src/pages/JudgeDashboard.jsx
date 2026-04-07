@@ -1,12 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../components/AuthContext.jsx';
-import { api, toServerAssetUrl } from '../services/apiClient.js';
-import JudgePanelDashboard from './JudgePanelDashboard.jsx';
-
-export default function JudgeDashboard() {
-  const { isAuthed, user, logout } = useAuth();
-  const navigate = useNavigate();
   const [contestants, setContestants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,9 +46,7 @@ export default function JudgeDashboard() {
               {['Dashboard', 'Live Event', 'Evaluate', 'Settings'].map((tab) => (
                 <button 
                   key={tab} 
-                  onClick={() => {
-                    setActiveTab(tab);
-                  }}
+
                   style={{...styles.navItem, ...(activeTab === tab ? styles.navItemActive : {})}}
                 >
                   <span style={styles.navItemText}>{tab}</span>
@@ -80,25 +70,7 @@ export default function JudgeDashboard() {
 
         {/* Main Content Area */}
         <main style={styles.mainContent}>
-          {activeTab !== 'Evaluate' && (
-            <header style={styles.topHeader}>
-              <div>
-                <h1 style={styles.pageTitle}>{activeTab}</h1>
-                <p style={styles.pageSubtitle}>
-                  {activeTab === 'Dashboard' 
-                    ? 'Monitor live contestants and overall event statistics.' 
-                    : `Currently viewing ${activeTab} panel.`}
-                </p>
-              </div>
-            </header>
-          )}
 
-          <div style={styles.contentScrollable}>
-            {activeTab === 'Evaluate' ? (
-              <div style={{ margin: '-2rem 0', height: '100%' }}>
-                <JudgePanelDashboard embedded={true} />
-              </div>
-            ) : activeTab !== 'Dashboard' ? (
               <div style={styles.placeholderArea}>
                 <p>{activeTab} module is coming soon.</p>
               </div>
@@ -116,7 +88,7 @@ export default function JudgeDashboard() {
                     <div style={styles.cardHeader}>
                       <div style={styles.avatarSection}>
                         {cont.imageUrl ? (
-                          <img src={toServerAssetUrl(cont.imageUrl)} alt={cont.name} style={styles.avatarImage} />
+
                         ) : (
                           <div style={styles.avatarPlaceholder}>{cont.name.charAt(0)}</div>
                         )}
@@ -132,7 +104,7 @@ export default function JudgeDashboard() {
                     </div>
                     
                     <div style={styles.cardFooter}>
-                      <button style={styles.scoreBtn} onClick={() => setActiveTab('Evaluate')}>
+
                         Evaluate Performance
                       </button>
                     </div>

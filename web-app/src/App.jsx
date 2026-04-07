@@ -21,7 +21,6 @@ import FinalLeaderboardDashboard from './pages/FinalLeaderboardDashboard.jsx';
 import FinalResult from './pages/FinalResult.jsx';
 
 import ReviewPage from './pages/ReviewPage.jsx';
-import ApplicationStatusPage from './pages/ApplicationStatusPage.jsx';
 
 export default function App() {
   return (
@@ -30,32 +29,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        
-        <Route 
-          path="/judge-dashboard" 
-          element={
-            <RequireAuth>
-              <JudgeDashboard />
-            </RequireAuth>
-          } 
-        />
-        <Route
-          path="/register"
-          element={
-            <RequireAuth>
-              <RegisterPage />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/application-status"
-          element={
-            <RequireAuth>
-              <ApplicationStatusPage />
-            </RequireAuth>
-          }
-        />
+ develop
 
         <Route
           path="/vote"
