@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
-import { contestantsAPI, votesAPI, settingsAPI } from '../api';
+import { contestantsAPI, votesAPI, settingsAPI, getAssetUrl } from '../api';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavBar from '../components/BottomNavBar';
 
@@ -159,7 +159,7 @@ export default function VotingScreen({ navigation }) {
         return (
             <View style={[styles.card, hasVotedForThis && styles.cardVoted]}>
                 <Image
-                    source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800' }}
+                    source={{ uri: getAssetUrl(item.imageUrl) || item.imageUrl || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800' }}
                     style={[styles.cardImage, hasVotedInCategory && !hasVotedForThis && { opacity: 0.3 }]}
                     resizeMode="cover"
                 />
