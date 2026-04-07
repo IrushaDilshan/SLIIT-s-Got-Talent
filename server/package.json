@@ -4,7 +4,19 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "seed": "node seed_db.js --all",
+    "seed:judges": "node seed_db.js --judges",
+    "seed:contestants": "node seed_db.js --contestants",
+    "seed:scores": "node seed_db.js --scores",
+    "seed:clear": "node seed_db.js --clear",
+    "db:status": "node db_admin.js status",
+    "db:stats": "node db_admin.js stats",
+    "db:indexes": "node db_admin.js indexes",
+    "db:verify": "node db_admin.js verify",
+    "db:backup": "node db_admin.js backup",
+    "db:collections": "node db_admin.js collections",
+    "db:size": "node db_admin.js size"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -10,9 +10,13 @@ function isSliitEmail(email) {
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setSession, isAuthed } = useAuth();
+  const { setSession, isAuthed, user } = useAuth();
 
-  const from = useMemo(() => location.state?.from?.pathname || '/vote', [location.state]);
+  const getDefaultRedirect = (userRole) => {
+    return userRole === 'judge' ? '/judge-panel' : '/vote';
+  };
+
+  const from = useMemo(() => location.state?.from?.pathname || getDefaultRedirect(user?.role), [location.state, user?.role]);
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -60,7 +64,10 @@ export default function LoginPage() {
       const res = await api.post({ path: '/auth/verify', body: { email: cleanEmail, otp: cleanOtp } });
       if (!res?.token || !res?.user) throw new Error(res?.message || 'Invalid OTP');
       setSession({ token: res.token, user: res.user });
-      navigate(from, { replace: true });
+      
+      // Route based on user role
+      const redirectPath = res.user?.role === 'judge' ? '/judge-panel' : from;
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       setError(err.message || 'Verification failed');
     } finally {

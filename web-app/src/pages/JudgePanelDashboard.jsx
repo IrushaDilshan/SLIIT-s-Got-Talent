@@ -1,63 +1,58 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useAuth } from "../components/AuthContext.jsx";
+import { judgeApi } from "../services/judgeApi";
 
 const JudgePanelDashboard = () => {
-  const [loggedInJudge] = useState({
-    id: 2,
-    name: "Judge Nethmi Fernando",
-    role: "Professional Judge",
+  const { user, token } = useAuth();
+
+  const loggedInJudge = {
+    id: user?.id || 2,
+    name: user?.name || user?.email?.split('@')[0] || "Judge",
+    role: "Judge",
     panel: "SLIIT Got Talent 2026",
     photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-    email: "nethmi.judge@sliit.com",
-  });
+    email: user?.email || "judge@sliit.lk",
+  };
 
   const [message, setMessage] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeContestantId, setActiveContestantId] = useState(1);
+  const [activeContestantId, setActiveContestantId] = useState(null);
+  const [contestants, setContestants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Contestants ලගේ data වලට photo URL එකක් එකතු කරලා තියෙනවා
-  const [contestants] = useState([
-    {
-      id: 1,
-      name: "Amandi Perera",
-      category: "Singing",
-      round: "Semi Final",
-      performanceTitle: "Echoes of You",
-      photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
-      status: "Ready for Review",
-      timeSlot: "07:30 PM",
-    },
-    {
-      id: 2,
-      name: "Kasun Madushan",
-      category: "Dancing",
-      round: "Semi Final",
-      performanceTitle: "Rhythm X Motion",
-      photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80",
-      status: "Scoring In Progress",
-      timeSlot: "07:45 PM",
-    },
-    {
-      id: 3,
-      name: "Nethmi Silva",
-      category: "Drama",
-      round: "Semi Final",
-      performanceTitle: "Silent Stage",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-      status: "Ready for Review",
-      timeSlot: "08:00 PM",
-    },
-    {
-      id: 4,
-      name: "Ravindu Senanayake",
-      category: "Beatboxing",
-      round: "Semi Final",
-      performanceTitle: "Pulse Machine",
-      photo: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=150&q=80",
-      status: "Top Rated",
-      timeSlot: "08:15 PM",
-    },
-  ]);
+  // Fetch contestants from API on mount
+  useEffect(() => {
+    const fetchContestants = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('🔄 Fetching contestants with token:', token ? 'Present' : 'Missing');
+        
+        const data = await judgeApi.getContestants({}, token);
+        console.log('✅ Contestants fetched:', data);
+        
+        setContestants(data || []);
+        // Set first contestant as active if available
+        if (data && data.length > 0) {
+          setActiveContestantId(data[0].id);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching contestants:', err);
+        setError(err.message || 'Failed to load contestants');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchContestants();
+    } else {
+      setError('No authentication token available');
+      setLoading(false);
+    }
+  }, [token]);
 
   const [scores, setScores] = useState({});
   const [submittedResults, setSubmittedResults] = useState({});
@@ -69,15 +64,19 @@ const JudgePanelDashboard = () => {
     { key: "audienceImpact", label: "Audience Impact", helper: "Engagement & overall response", max: 25 },
   ];
 
-  const categories = ["All", ...new Set(contestants.map((c) => c.category))];
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.isArray(contestants) ? [...new Set(contestants.map((c) => c.category))] : [];
+    return ["All", ...uniqueCategories];
+  }, [contestants]);
 
   const filteredContestants = useMemo(() => {
+    if (!Array.isArray(contestants)) return [];
     return contestants.filter((contestant) => {
       const matchesCategory = selectedCategory === "All" || contestant.category === selectedCategory;
       const matchesSearch =
         contestant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contestant.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contestant.performanceTitle.toLowerCase().includes(searchTerm.toLowerCase());
+        (contestant.category && contestant.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (contestant.description && contestant.description.toLowerCase().includes(searchTerm.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
   }, [contestants, selectedCategory, searchTerm]);
@@ -95,28 +94,63 @@ const JudgePanelDashboard = () => {
     return (s.creativity || 0) + (s.presentation || 0) + (s.skillLevel || 0) + (s.audienceImpact || 0);
   };
 
-  const handleSubmit = (contestant) => {
-    const judgeTotal = calculateJudgeTotal(contestant.id);
-    const result = {
-      judgeId: loggedInJudge.id,
-      contestantId: contestant.id,
-      judgeScore: judgeTotal,
-      criteria: scores[contestant.id] || {},
-    };
+  const handleSubmit = async (contestant) => {
+    try {
+      // Validate all scores are filled
+      const scores_data = scores[contestant.id] || {};
+      if (!scores_data.creativity || !scores_data.presentation || !scores_data.skillLevel || !scores_data.audienceImpact) {
+        setMessage("❌ Please fill all scoring criteria");
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
 
-    setSubmittedResults((prev) => ({ ...prev, [contestant.id]: result }));
-    setMessage(`✅ Score submitted for ${contestant.name}: ${judgeTotal}/100`);
-    
-    // Auto-select next contestant
-    const currentIndex = filteredContestants.findIndex(c => c.id === contestant.id);
-    if (currentIndex < filteredContestants.length - 1) {
-      setTimeout(() => setActiveContestantId(filteredContestants[currentIndex + 1].id), 1500);
+      const judgeTotal = calculateJudgeTotal(contestant.id);
+      
+      // Prepare API payload
+      const scoreData = {
+        contestantId: contestant.id, // MongoDB ObjectId from API
+        creativity: scores_data.creativity,
+        presentation: scores_data.presentation,
+        skillLevel: scores_data.skillLevel,
+        audienceImpact: scores_data.audienceImpact,
+        notes: "",
+      };
+
+      console.log('📤 Sending score submission:', scoreData);
+      setMessage("⏳ Submitting score...");
+
+      // Call API with token
+      const response = await judgeApi.submitScore(scoreData, token);
+      
+      console.log('✅ API Response:', response);
+
+      // Update local state only after successful API call
+      setSubmittedResults((prev) => ({ 
+        ...prev, 
+        [contestant.id]: {
+          scoreId: response.data?.scoreId,
+          judgeScore: judgeTotal,
+          criteria: scores_data,
+        }
+      }));
+
+      setMessage(`✅ Score submitted for ${contestant.name}: ${judgeTotal}/100`);
+      
+      // Auto-select next contestant
+      const currentIndex = filteredContestants.findIndex(c => c.id === contestant.id);
+      if (currentIndex < filteredContestants.length - 1) {
+        setTimeout(() => setActiveContestantId(filteredContestants[currentIndex + 1].id), 1500);
+      }
+      
+      setTimeout(() => setMessage(""), 4000);
+    } catch (err) {
+      console.error('❌ Submission failed:', err);
+      setMessage(`❌ Error: ${err.message || 'Failed to submit score'}`);
+      setTimeout(() => setMessage(""), 4000);
     }
-    
-    setTimeout(() => setMessage(""), 4000);
   };
 
-  const scoreboard = contestants
+  const scoreboard = (Array.isArray(contestants) ? contestants : [])
     .map((contestant) => {
       const saved = submittedResults[contestant.id];
       return {
@@ -128,9 +162,9 @@ const JudgePanelDashboard = () => {
     })
     .sort((a, b) => b.judgeScore - a.judgeScore);
 
-  const activeContestant = contestants.find((c) => c.id === activeContestantId) || contestants[0];
-  const activeTotal = calculateJudgeTotal(activeContestant.id);
-  const isSubmitted = !!submittedResults[activeContestant.id];
+  const activeContestant = Array.isArray(contestants) ? (contestants.find((c) => c.id === activeContestantId) || contestants[0]) : null;
+  const activeTotal = activeContestant ? calculateJudgeTotal(activeContestant.id) : 0;
+  const isSubmitted = activeContestant ? !!submittedResults[activeContestant.id] : false;
 
   return (
     <div style={styles.page}>
@@ -143,6 +177,23 @@ const JudgePanelDashboard = () => {
         </div>
       )}
 
+      {loading && (
+        <div style={{...styles.toast, background: 'linear-gradient(90deg, #6f4cff, #23c9ff)'}}>
+          ⏳ Loading contestants...
+        </div>
+      )}
+
+      {error && (
+        <div style={{...styles.toast, background: 'linear-gradient(90deg, #ff6b6b, #ee5a6f)'}}>
+          ❌ {error}
+        </div>
+      )}
+
+      {!loading && contestants.length === 0 ? (
+        <div style={{...styles.toast, background: 'linear-gradient(90deg, #ffa502, #ffb827)'}}>
+          ⚠️ No contestants available
+        </div>
+      ) : (!loading && (
       <div style={styles.shell}>
         {/* SIDEBAR */}
         <aside style={styles.sidebar}>
@@ -167,7 +218,7 @@ const JudgePanelDashboard = () => {
           <div style={styles.sidebarCard}>
             <h4 style={styles.sidebarLabel}>Live Scoreboard</h4>
             <div style={styles.leaderboardList}>
-              {scoreboard.map((item, index) => (
+              {Array.isArray(scoreboard) && scoreboard.map((item, index) => (
                 <div key={item.id} style={styles.leaderItem}>
                   <div style={styles.leaderLeft}>
                     <span style={styles.rankText}>#{index + 1}</span>
@@ -212,6 +263,7 @@ const JudgePanelDashboard = () => {
           </div>
 
           {/* FOCUS SCORING AREA */}
+          {activeContestant && (
           <div style={styles.focusCard}>
             <div style={styles.focusHeader}>
               <div style={styles.focusProfile}>
@@ -219,7 +271,9 @@ const JudgePanelDashboard = () => {
                 <div>
                   <span style={styles.categoryBadge}>{activeContestant.category}</span>
                   <h2 style={styles.focusName}>{activeContestant.name}</h2>
-                  <p style={styles.focusPerformance}>"{activeContestant.performanceTitle}" • {activeContestant.timeSlot}</p>
+                  {activeContestant.description && (
+                    <p style={styles.focusPerformance}>"{activeContestant.description}"</p>
+                  )}
                 </div>
               </div>
               <div style={styles.focusTotalBox}>
@@ -281,12 +335,13 @@ const JudgePanelDashboard = () => {
               </button>
             </div>
           </div>
+          )}
 
           {/* UP NEXT QUEUE */}
           <div>
             <h3 style={styles.queueTitle}>Up Next / Other Contestants</h3>
             <div style={styles.queueGrid}>
-              {filteredContestants.map(c => (
+              {Array.isArray(filteredContestants) && filteredContestants.map(c => (
                 <div 
                   key={c.id} 
                   onClick={() => setActiveContestantId(c.id)}
@@ -308,6 +363,7 @@ const JudgePanelDashboard = () => {
           </div>
         </main>
       </div>
+      ))}
     </div>
   );
 };

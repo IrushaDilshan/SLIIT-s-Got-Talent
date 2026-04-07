@@ -82,11 +82,11 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/vote" replace />} />
         <Route path="/judge-panel" element={<JudgePanelDashboard />} />
-        <Route path="*" element={<Navigate to="/judge-panel" replace />} />
         <Route path="/final-leaderboard" element={<FinalLeaderboardDashboard />} />
         <Route path="/final-result" element={<FinalResult />} />
+
+        <Route path="*" element={<Navigate to="/vote" replace />} />
       </Routes>
     </AuthProvider>
   );
