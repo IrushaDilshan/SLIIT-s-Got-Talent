@@ -2,6 +2,30 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/apiClient.js';
 import { useAuth } from '../components/AuthContext.jsx';
 import { Link, useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../services/apiClient.js';
+
+const CATEGORY_BUTTONS = ['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other'];
+
+function normalizeCategory(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'acting(drama)' || raw === 'acting (drama)') return 'Acting (Drama)';
+  if (raw === 'singing') return 'Singing';
+  if (raw === 'dancing') return 'Dancing';
+  if (raw === 'music') return 'Music';
+  if (raw === 'magic') return 'Magic';
+  if (raw === 'other') return 'Other';
+  return value;
+}
+
+function toServerAssetUrl(assetPath) {
+  if (!assetPath) return null;
+  if (/^https?:\/\//i.test(assetPath)) return assetPath;
+
+  const apiBase = getApiBaseUrl();
+  const serverBase = apiBase.replace(/\/api\/?$/, '');
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  return `${serverBase}${normalizedPath}`;
+}
 
 function youtubeThumb(url) {
   if (!url) return null;
@@ -54,24 +78,25 @@ export default function VotePage() {
   }
 
   const groupedData = useMemo(() => contestants.reduce((acc, current) => {
-    const category = current.talentType || 'Uncategorized';
+    const category = normalizeCategory(current.talentType) || 'Uncategorized';
     if (!acc[category]) acc[category] = [];
     acc[category].push(current);
     return acc;
   }, {}), [contestants]);
 
-  const categories = useMemo(() => ['All', ...Object.keys(groupedData).sort()], [groupedData]);
+  const categories = CATEGORY_BUTTONS;
   
   const filteredContestants = useMemo(() => activeCategory === 'All' 
     ? contestants 
-    : groupedData[activeCategory] || [], [activeCategory, contestants, groupedData]);
+    : contestants.filter((c) => normalizeCategory(c.talentType) === activeCategory), [activeCategory, contestants]);
 
   const cards = useMemo(() => {
     const votedCategories = user?.votedCategories || [];
     const votedContestants = user?.votedContestants || [];
 
     return filteredContestants.map((c) => {
-      const thumb = youtubeThumb(c.videoUrl);
+      const imagePreview = toServerAssetUrl(c.imageUrl);
+      const thumb = imagePreview || youtubeThumb(c.videoUrl);
       const isVotedForThisContestant = votedContestants.includes(c._id);
       const hasVotedInCategory = votedCategories.includes(c.talentType);
       
@@ -88,7 +113,7 @@ export default function VotePage() {
           <div className="card-content">
             <h3 className="card-title">{c.name}</h3>
             <p className="card-desc">{c.description || 'No description provided.'}</p>
-            <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+            <div className="vote-btn-wrapper">
               <button
                 className={`vote-btn ${isVotedForThisContestant ? 'voted' : ''}`}
                 disabled={hasVotedInCategory}
@@ -191,64 +216,100 @@ export default function VotePage() {
 
         /* Voting Controls Container */
         .content-container {
-          max-width: 1300px; margin: 0 auto; padding: 40px 5%; position: relative; z-index: 10;
+          max-width: 1800px; margin: 0 auto; padding: 40px 2%; position: relative; z-index: 10;
         }
 
         /* Premium Contestant Card */
         .contestant-grid {
-          display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px;
+          display: flex; flex-wrap: wrap; justify-content: center; gap: 35px;
         }
         .premium-card {
-          background: rgba(20, 20, 25, 0.6); border: 1px solid rgba(255,255,255,0.05);
-          border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          width: 340px; max-width: 100%; flex-shrink: 0;
+          background: linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(15, 15, 20, 0.9));
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;
+          position: relative; z-index: 1;
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .premium-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          border-radius: 24px; point-events: none;
+          background: linear-gradient(45deg, rgba(253, 93, 115, 0), rgba(253, 93, 115, 0.08), rgba(253, 93, 115, 0));
+          z-index: -1; opacity: 0; transition: opacity 0.5s ease;
         }
         .premium-card:hover {
-          transform: translateY(-8px); border-color: rgba(253, 93, 115, 0.3);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 30px rgba(253, 93, 115, 0.05);
+          transform: translateY(-10px) scale(1.02);
+          border-color: rgba(253, 93, 115, 0.4);
+          box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 40px rgba(253, 93, 115, 0.15);
         }
+        .premium-card:hover::before { opacity: 1; }
 
         .card-image-wrapper {
-          position: relative; width: 100%; aspect-ratio: 16/9; background: #1a1a20;
-          overflow: hidden;
+          position: relative; width: 100%; aspect-ratio: 16/10; background: #121217;
+          overflow: hidden; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
         .card-image-wrapper img {
-          width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
+          width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease;
         }
-        .premium-card:hover .card-image-wrapper img { transform: scale(1.05); }
+        .card-image-wrapper::after {
+          content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+          background: linear-gradient(to top, rgba(15, 15, 20, 1), transparent);
+          pointer-events: none;
+        }
+        .premium-card:hover .card-image-wrapper img { transform: scale(1.08) rotate(1deg); }
         .card-image-placeholder {
           width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-          font-size: 3rem; font-weight: 800; color: rgba(255,255,255,0.1);
+          font-size: 4rem; font-weight: 900; color: rgba(255,255,255,0.05);
+          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
         }
         
         .card-badge {
-          position: absolute; top: 16px; right: 16px;
-          background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-          border: 1px solid rgba(255,255,255,0.1); padding: 4px 12px;
-          border-radius: 30px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 1px;
+          position: absolute; top: 20px; right: 20px; z-index: 2;
+          background: rgba(253, 93, 115, 0.15); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(253, 93, 115, 0.3); padding: 6px 16px; color: #fff;
+          border-radius: 30px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+          letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        .card-content { padding: 24px; display: flex; flex-direction: column; flex-grow: 1; }
-        .card-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 10px 0; color: #fff; }
-        .card-desc { color: #94A3B8; font-size: 0.95rem; line-height: 1.6; margin: 0; }
+        .card-content { padding: 30px; display: flex; flex-direction: column; flex-grow: 1; position: relative; z-index: 2; }
+        .card-title {
+          font-size: 1.6rem; font-weight: 800; margin: 0 0 12px 0;
+          background: linear-gradient(to right, #ffffff, #cbd5e1);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          letter-spacing: -0.5px;
+        }
+        .card-desc { color: #94A3B8; font-size: 1rem; line-height: 1.7; margin: 0; font-weight: 400; }
 
         /* Modern Vote Button */
+        .vote-btn-wrapper { margin-top: auto; padding-top: 25px; }
         .vote-btn {
-          width: 100%; background: linear-gradient(135deg, #FD5D73 0%, #E11D48 100%);
-          color: #fff; font-weight: 700; font-size: 1rem; padding: 14px 20px;
-          border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease;
-          box-shadow: 0 8px 20px rgba(225, 29, 72, 0.2);
+          width: 100%; position: relative; overflow: hidden;
+          background: linear-gradient(135deg, rgba(253,93,115,0.9) 0%, rgba(225,29,72,0.9) 100%);
+          color: #fff; font-weight: 700; font-size: 1.05rem; padding: 16px 24px;
+          border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
+          cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 8px 25px rgba(225, 29, 72, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+          text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .vote-btn::before {
+          content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: left 0.5s ease;
         }
         .vote-btn:hover:not(:disabled) {
-          transform: translateY(-2px); box-shadow: 0 12px 25px rgba(225, 29, 72, 0.4);
+          transform: translateY(-3px); box-shadow: 0 15px 35px rgba(225, 29, 72, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
         }
+        .vote-btn:hover:not(:disabled)::before { left: 100%; }
+        
         .vote-btn:disabled.voted {
-          background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3);
-          color: #4ade80; box-shadow: none; transform: none; cursor: not-allowed;
+          background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.4);
+          color: #4ade80; box-shadow: 0 0 20px rgba(46,204,113,0.1); transform: none; cursor: default;
         }
         .vote-btn:disabled:not(.voted) {
-          background: rgba(255,255,255,0.05); color: #64748B; cursor: not-allowed; box-shadow: none;
+          background: rgba(255,255,255,0.03); color: #64748B; border-color: rgba(255,255,255,0.05);
+          cursor: not-allowed; box-shadow: none;
         }
 
         /* Filter Tabs */

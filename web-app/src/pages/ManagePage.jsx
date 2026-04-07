@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.jsx';
 import { api } from '../services/apiClient.js';
 
 export default function ManagePage() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
+  const navigate = useNavigate();
   const [contestants, setContestants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,36 +47,82 @@ export default function ManagePage() {
   };
 
   const pending = contestants.filter(c => (c.status || '').toLowerCase() === 'pending' || !c.status);
-  const others = contestants.filter(c => (c.status || '').toLowerCase() !== 'pending' && c.status);
+  const rejected = contestants.filter(c => (c.status || '').toLowerCase() === 'rejected');
+  const allNonRejected = contestants.filter(c => (c.status || '').toLowerCase() == 'approved');
+  const renderRow = (c, options = {}) => {
+    const status = (c.status).toLowerCase();
+    const showRemarks = Boolean(options.showRemarks);
 
-  const renderRow = (c) => (
-    <div key={c._id} className="leaderboard-row" style={{ display: 'grid', gridTemplateColumns: '1fr 100px 140px', gap: '10px', alignItems: 'center', backgroundColor: 'var(--bg-card)', padding: '15px 20px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '10px' }}>
-      <div className="lb-details">
-        <h4 style={{ margin: '0 0 5px 0' }}>{c.name} <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({c.universityId})</span></h4>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{c.talentType}</span>
+    return (
+      <div
+        key={c._id}
+        className="leaderboard-row"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gap: '12px',
+          alignItems: 'start',
+          backgroundColor: 'var(--bg-card)',
+          padding: '15px 16px',
+          borderRadius: '12px',
+          border: '1px solid var(--border)',
+          marginBottom: '10px'
+        }}
+      >
+        <div className="lb-details" style={{ minWidth: 0 }}>
+          <h4 style={{ margin: '0 0 6px 0', overflowWrap: 'anywhere' }}>
+            {c.name} <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({c.universityId})</span>
+          </h4>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '6px' }}>{c.talentType}</div>
+          {showRemarks && (
+            <div style={{ color: '#fca5a5', fontSize: '0.85rem', lineHeight: 1.4 }}>
+              <strong>Remarks:</strong> {c.remarks || 'No remarks provided.'}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+          <span
+            style={{
+              fontWeight: 'bold',
+              fontSize: '0.82rem',
+              padding: '4px 8px',
+              borderRadius: '999px',
+              background: 'rgba(255,255,255,0.05)',
+              color: status === 'approved' ? '#2ecc71' : status === 'rejected' ? '#ff7675' : '#fdcb6e'
+            }}
+          >
+            {status.toUpperCase()}
+          </span>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => navigate(`/dashboard/review/${c._id}`)}
+              style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #74b9ff', background: 'rgba(116,185,255,0.12)', color: '#74b9ff', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+            >
+              View
+            </button>
+
+            {status !== 'approved' && (
+              <button onClick={() => handleAction(c._id, 'approved')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#2ecc71', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                Approve
+              </button>
+            )}
+
+            {status !== 'rejected' && (
+              <button onClick={() => handleAction(c._id, 'rejected')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#ff7675', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                Reject
+              </button>
+            )}
+
+            <button onClick={() => handleDelete(c._id)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #636e72', background: 'transparent', color: '#b2bec3', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+              Del
+            </button>
+          </div>
+        </div>
       </div>
-      <div style={{ textAlign: 'center' }}>
-        <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: (c.status || '').toLowerCase() === 'approved' ? '#2ecc71' : (c.status || '').toLowerCase() === 'rejected' ? '#ff7675' : '#fdcb6e' }}>
-          {(c.status || 'pending').toUpperCase()}
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        {(c.status || '').toLowerCase() !== 'approved' && (
-          <button onClick={() => handleAction(c._id, 'approved')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#2ecc71', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
-            Approve
-          </button>
-        )}
-        {(c.status || '').toLowerCase() !== 'rejected' && (
-          <button onClick={() => handleAction(c._id, 'rejected')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#ff7675', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
-            Reject
-          </button>
-        )}
-        <button onClick={() => handleDelete(c._id)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #636e72', background: 'transparent', color: '#b2bec3', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
-          Del
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div>
@@ -98,10 +146,15 @@ export default function ManagePage() {
           <div className="leaderboard-list" style={{ marginBottom: '40px' }}>
             {pending.length ? pending.map(renderRow) : <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, color: 'var(--text-muted)' }}>No pending requests</div>}
           </div>
+
+          <h3 style={{ marginBottom: '15px', color: 'var(--text-muted)' }}>Rejected Contestants ({rejected.length})</h3>
+          <div className="leaderboard-list" style={{ marginBottom: '40px' }}>
+            {rejected.length ? rejected.map((c) => renderRow(c, { showRemarks: true })) : <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, color: 'var(--text-muted)' }}>No rejected contestants</div>}
+          </div>
           
-          <h3 style={{ marginBottom: '15px', color: 'var(--text-muted)' }}>All Contestants</h3>
+          <h3 style={{ marginBottom: '15px', color: 'var(--text-muted)' }}>All Contestants ({allNonRejected.length})</h3>
           <div className="leaderboard-list">
-            {others.length ? others.map(renderRow) : <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, color: 'var(--text-muted)' }}>No other contestants</div>}
+            {allNonRejected.length ? allNonRejected.map(renderRow) : <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, color: 'var(--text-muted)' }}>No contestants</div>}
           </div>
         </>
       )}

@@ -125,7 +125,7 @@ export default function VotingScreen({ navigation }) {
                             }
                             Alert.alert('Success', 'Your vote has been cast!');
                         } catch (error) {
-                            console.error('Vote error:', error?.response?.data || error.message);
+                            console.log('Vote error:', error?.response?.data || error.message);
                             const message = error?.response?.data?.message || 'Failed to cast vote';
                             Alert.alert('Error', message);
                         } finally {

@@ -16,13 +16,15 @@ import CountdownPage from './pages/CountdownPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 
+
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+
+        />
 
         <Route
           path="/vote"
@@ -72,6 +74,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <CountdownPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="review/:id"
+            element={
+              <RequireAdmin>
+                <ReviewPage />
               </RequireAdmin>
             }
           />
