@@ -24,6 +24,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+export const getAssetUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export const authAPI = {
   login: (email) => api.post('/auth/login', { email }),
   verifyOTP: (email, otp) => api.post('/auth/verify', { email, otp }),
