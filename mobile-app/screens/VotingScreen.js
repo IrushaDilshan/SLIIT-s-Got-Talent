@@ -58,7 +58,8 @@ export default function VotingScreen({ navigation }) {
                 setContestants(conRes.data);
                 setIsDummyData(false);
             } else {
-                setContestants([]);
+                setContestants(DUMMY_CONTESTANTS);
+                setIsDummyData(true);
             }
             if (setRes.data && setRes.data.categories) {
                 setCategories(['All', ...setRes.data.categories]);
@@ -77,7 +78,9 @@ export default function VotingScreen({ navigation }) {
             }
         } catch (e) {
             console.log(e);
-            setContestants([]);
+            setContestants(DUMMY_CONTESTANTS);
+            setCategories(['All', 'Music', 'Singing', 'Dancing', 'Magic']);
+            setIsDummyData(true);
             setTimeLeft(0);
         } finally {
             setLoading(false);
