@@ -2,8 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Use your machine's local IP address instead of localhost for physical devices/emulators
-// Expo host IPv4: 172.20.10.5
-const API_BASE_URL = 'http://172.20.10.5:5000/api';
+// Expo host IPv4: 172.20.10.2
+const API_BASE_URL = 'http://172.20.10.2:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -23,6 +23,13 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
+export const getAssetUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
 
 export const authAPI = {
   login: (email) => api.post('/auth/login', { email }),
