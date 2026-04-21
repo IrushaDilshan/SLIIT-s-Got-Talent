@@ -57,13 +57,13 @@ export default function VotingScreen({ navigation }) {
             if (conRes.data && conRes.data.length > 0) {
                 setContestants(conRes.data);
                 setIsDummyData(false);
+                
+                // Dynamically extract categories to prevent spelling mismatches
+                const uniqueCats = ['All', ...new Set(conRes.data.map(c => c.talentType || 'Other'))];
+                setCategories(uniqueCats);
             } else {
                 setContestants(DUMMY_CONTESTANTS);
                 setIsDummyData(true);
-            }
-            if (setRes.data && setRes.data.categories) {
-                setCategories(['All', ...setRes.data.categories]);
-            } else {
                 setCategories(['All', 'Music', 'Singing', 'Dancing', 'Magic']);
             }
             if (setRes.data && setRes.data.countdownEnd) {
@@ -163,7 +163,7 @@ export default function VotingScreen({ navigation }) {
 
     const renderContestant = ({ item }) => {
         const cat = getCategory(item);
-        const hasVotedInCategory = votedCategories.includes(cat);
+        const hasVotedInCategory = votedCategories.some(c => String(c).toLowerCase() === String(cat).toLowerCase());
         const hasVotedForThis = votedContestants.includes(item._id);
 
         return (

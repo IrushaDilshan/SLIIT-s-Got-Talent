@@ -1,9 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Use your machine's local IP address instead of localhost for physical devices/emulators
-// Android Emulator Host IPv4 alias is 10.0.2.2
-const API_BASE_URL = 'http://10.0.2.2:5000/api';
+// Use your specific Wi-Fi LAN IP address so it works on BOTH your physical phone and the Android Emulator
+const API_BASE_URL = 'http://192.168.1.200:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

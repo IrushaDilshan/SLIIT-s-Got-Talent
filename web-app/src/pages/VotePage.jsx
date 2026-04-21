@@ -60,11 +60,11 @@ export default function VotePage() {
         ]);
         
         if (!cancelled) {
-          if (settingsData && settingsData.categories) {
-            setCategories(['All', ...settingsData.categories]);
+          if (Array.isArray(contestantsData)) {
+            const uniqueCats = ['All', ...new Set(contestantsData.map(c => c.talentType || 'Other'))];
+            setCategories(uniqueCats);
           } else {
-             // Fallback
-             setCategories(['All', 'Singing', 'Dancing', 'Acting (Drama)', 'Music', 'Magic', 'Other']);
+            setCategories(['All']);
           }
           setContestants(Array.isArray(contestantsData) ? contestantsData : []);
         }
@@ -107,7 +107,7 @@ export default function VotePage() {
       const imagePreview = toServerAssetUrl(c.imageUrl);
       const thumb = imagePreview || youtubeThumb(c.videoUrl);
       const isVotedForThisContestant = votedContestants.includes(c._id);
-      const hasVotedInCategory = votedCategories.includes(c.talentType);
+      const hasVotedInCategory = votedCategories.some(cat => String(cat).toLowerCase() === String(c.talentType).toLowerCase());
       
       return (
         <div key={c._id} className="premium-card">
