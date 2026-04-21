@@ -4,14 +4,12 @@
  */
 
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 
 /**
  * Generate JWT token for user
- * @param {string} userId - User ID from database
- * @param {string} role - User role
- * @returns {string} JWT token valid for 7 days
  */
 const generateToken = (userId, role) => {
   return jwt.sign(
@@ -24,13 +22,11 @@ const generateToken = (userId, role) => {
 /**
  * Judge Login - Request OTP
  * POST /api/auth/login
- * Send OTP to user's email for verification
  */
 exports.login = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
 
-    // Validation: Check email is provided
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -38,7 +34,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Validate SLIIT email
+    email = email.trim().toLowerCase();
+
     if (!/@(my\.)?sliit\.lk$/i.test(email)) {
       return res.status(400).json({
         success: false,
@@ -46,22 +43,24 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Find user by email or create new user if doesn't exist
     let user = await User.findOne({ email });
-    
+
     if (!user) {
-      // Auto-create user with SLIIT email
-      const name = email.split('@')[0]; // Use email prefix as name
+      const name = email.split('@')[0];
+
       user = await User.create({
         name,
         email,
-        password: require('crypto').randomBytes(16).toString('hex'), // Random password
+        password: crypto.randomBytes(16).toString('hex'),
         role: 'judge',
         isActive: true,
       });
     }
 
-    // Check if user is active
+    if (!user.name || !user.name.trim()) {
+      user.name = email.split('@')[0];
+    }
+
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
@@ -69,25 +68,43 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Save OTP to database
     user.otp = otp;
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    // Log OTP in console for development (since email not configured)
-    console.log(`\n✉️  OTP for ${email}: ${otp}`);
-    console.log(`⏰ OTP expires in 10 minutes\n`);
+    await sendEmail({
+      to: email,
+      subject: 'SLIIT Got Talent - Your OTP Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #111827; margin-bottom: 10px;">SLIIT Got Talent</h2>
+          <p style="color: #374151; font-size: 15px;">Hello ${user.name},</p>
+          <p style="color: #374151; font-size: 15px;">
+            Your OTP code for login is:
+          </p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb; background: #eff6ff; padding: 16px; text-align: center; border-radius: 10px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #374151; font-size: 14px;">
+            This OTP will expire in <strong>10 minutes</strong>.
+          </p>
+          <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">
+            If you did not request this code, please ignore this email.
+          </p>
+        </div>
+      `,
+      text: `Hello ${user.name}, Your OTP for SLIIT Got Talent login is ${otp}. It expires in 10 minutes.`,
+    });
 
     return res.status(200).json({
       success: true,
-      message: 'OTP sent to your email. (Check server console in dev mode)',
+      message: 'OTP sent successfully to your email.',
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('LOGIN FULL ERROR:', error);
     return res.status(500).json({
       success: false,
       message: 'An error occurred during login.',
@@ -99,13 +116,11 @@ exports.login = async (req, res) => {
 /**
  * Verify OTP
  * POST /api/auth/verify
- * Verify OTP and generate JWT token
  */
 exports.verify = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    let { email, otp } = req.body;
 
-    // Validation
     if (!email || !otp) {
       return res.status(400).json({
         success: false,
@@ -113,7 +128,9 @@ exports.verify = async (req, res) => {
       });
     }
 
-    // Find user and get OTP (which is hidden by default)
+    email = email.trim().toLowerCase();
+    otp = String(otp).trim();
+
     const user = await User.findOne({ email }).select('+otp +otpExpiry');
 
     if (!user) {
@@ -123,7 +140,10 @@ exports.verify = async (req, res) => {
       });
     }
 
-    // Check if OTP exists and is not expired
+    if (!user.name || !user.name.trim()) {
+      user.name = email.split('@')[0];
+    }
+
     if (!user.otp || !user.otpExpiry) {
       return res.status(401).json({
         success: false,
@@ -134,11 +154,10 @@ exports.verify = async (req, res) => {
     if (new Date() > user.otpExpiry) {
       return res.status(401).json({
         success: false,
-        message: 'OTP expired. Please request a new one.',
+        message: 'OTP expired. Please request a new OTP.',
       });
     }
 
-    // Verify OTP
     if (user.otp !== otp) {
       return res.status(401).json({
         success: false,
@@ -146,12 +165,10 @@ exports.verify = async (req, res) => {
       });
     }
 
-    // Clear OTP after successful verification
-    user.otp = null;
-    user.otpExpiry = null;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
     await user.save();
 
-    // Generate JWT token
     const token = generateToken(user._id, user.role);
 
     return res.status(200).json({
@@ -168,7 +185,7 @@ exports.verify = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Verify error:', error);
+    console.error('VERIFY FULL ERROR:', error);
     return res.status(500).json({
       success: false,
       message: 'An error occurred during verification.',
@@ -180,14 +197,11 @@ exports.verify = async (req, res) => {
 /**
  * Judge Register (Admin only)
  * POST /api/auth/register
- * @param {object} req - Express request
- * @param {object} res - Express response
  */
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, panel, photo } = req.body;
+    let { name, email, password, panel, photo } = req.body;
 
-    // Validation: Check all required fields
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -195,8 +209,11 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
+    name = name.trim();
+    email = email.trim().toLowerCase();
+
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -204,7 +221,6 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Create new judge
     const newJudge = await User.create({
       name,
       email,
@@ -215,7 +231,6 @@ exports.register = async (req, res) => {
       isActive: true,
     });
 
-    // Generate token
     const token = generateToken(newJudge._id, newJudge.role);
 
     return res.status(201).json({
@@ -231,9 +246,8 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('REGISTRATION FULL ERROR:', error);
 
-    // Handle duplicate email error from MongoDB
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -252,12 +266,9 @@ exports.register = async (req, res) => {
 /**
  * Get Logged-In Judge Profile
  * GET /api/auth/profile
- * @param {object} req - Express request (requires auth)
- * @param {object} res - Express response
  */
 exports.getProfile = async (req, res) => {
   try {
-    // req.userId is set by authMiddleware
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -281,7 +292,7 @@ exports.getProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Profile fetch error:', error);
+    console.error('PROFILE FETCH ERROR:', error);
     return res.status(500).json({
       success: false,
       message: 'An error occurred while fetching profile.',
@@ -291,4 +302,3 @@ exports.getProfile = async (req, res) => {
 };
 
 module.exports = exports;
-

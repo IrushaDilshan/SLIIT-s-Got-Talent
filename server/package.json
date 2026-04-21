@@ -4,8 +4,8 @@
   "description": "SLIIT Got Talent 2026 - Judge Scoring Dashboard Backend",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node init && node index.js",
+    "dev": "node init && nodemon index.js",
     "seed": "node seed_db.js --all",
     "seed:judges": "node seed_db.js --judges",
     "seed:contestants": "node seed_db.js --contestants",
