@@ -4,16 +4,6 @@
     "description": "Postman collection for the SLIIT's Got Talent backend. Includes token capture hooks for authentication.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{auth_token}}",
-        "type": "string"
-      }
-    ]
-  },
   "event": [
     {
       "listen": "prerequest",
@@ -41,7 +31,17 @@
       "type": "string"
     },
     {
-      "key": "auth_token",
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "judge_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "student_token",
       "value": "",
       "type": "string"
     },
@@ -90,8 +90,8 @@
                 "exec": [
                   "const responseJson = pm.response.json();",
                   "if (responseJson.token) {",
-                  "    pm.collectionVariables.set(\"auth_token\", responseJson.token);",
-                  "    console.log(\"Token captured and set to collection variable 'auth_token'\");",
+                  "    pm.collectionVariables.set(\"admin_token\", responseJson.token);",
+                  "    console.log(\"Token captured and set to collection variable 'admin_token'\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -157,8 +157,8 @@
                 "exec": [
                   "const responseJson = pm.response.json();",
                   "if (responseJson.token) {",
-                  "    pm.collectionVariables.set(\"auth_token\", responseJson.token);",
-                  "    console.log(\"Token captured and set to collection variable 'auth_token'\");",
+                  "    pm.collectionVariables.set(\"judge_token\", responseJson.token);",
+                  "    console.log(\"Token captured and set to collection variable 'judge_token'\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -171,6 +171,73 @@
             "body": {
               "mode": "raw",
               "raw": "{\n    \"email\": \"judge@sliit.lk\",\n    \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Student (Send OTP)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"student@my.sliit.lk\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Student OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "if (responseJson.token) {",
+                  "    pm.collectionVariables.set(\"student_token\", responseJson.token);",
+                  "    console.log(\"Token captured and set to collection variable 'student_token'\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"student@my.sliit.lk\",\n    \"otp\": \"123456\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -223,6 +290,16 @@
               "path": [
                 "contestants",
                 "my-application"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
@@ -310,6 +387,16 @@
                 "contestants",
                 "admin"
               ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         },
@@ -327,6 +414,16 @@
                 "contestants",
                 "admin",
                 "{{contestant_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
@@ -354,6 +451,16 @@
                 "contestants",
                 "{{contestant_id}}"
               ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         },
@@ -370,6 +477,16 @@
               "path": [
                 "contestants",
                 "{{contestant_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
@@ -397,6 +514,16 @@
                 "contestants",
                 "{{contestant_id}}",
                 "score"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{judge_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
@@ -444,6 +571,16 @@
               "path": [
                 "settings"
               ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         }
@@ -490,6 +627,16 @@
               ],
               "path": [
                 "votes"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
