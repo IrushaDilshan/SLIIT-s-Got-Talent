@@ -58,16 +58,14 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
-    // OTP for email verification
+    // OTP fields for email-based authentication
     otp: {
       type: String,
-      default: null,
+      select: false,
     },
-
-    // OTP expiration time
-    otpExpires: {
+    otpExpiry: {
       type: Date,
-      default: null,
+      select: false,
     },
 
     // Account creation and update timestamps
