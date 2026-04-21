@@ -230,3 +230,41 @@ exports.registerContestant = async (req, res) => {
         return res.status(500).json({ message: 'Server error while registering contestant' });
     }
 };
+
+// @desc    Submit a score from a judge
+// @route   PUT /api/contestants/:id/score
+// @access  Private/Judge
+exports.submitJudgeScore = async (req, res) => {
+    try {
+        const { score } = req.body;
+        const judgeId = req.user._id;
+        const contestantId = req.params.id;
+
+        if (score === undefined || score < 0 || score > 100) {
+            return res.status(400).json({ message: 'Valid score between 0 and 100 is required' });
+        }
+
+        const contestant = await Contestant.findById(contestantId);
+        if (!contestant) {
+            return res.status(404).json({ message: 'Contestant not found' });
+        }
+
+        // Pull any existing score from this judge to avoid duplicates
+        await Contestant.updateOne(
+            { _id: contestantId },
+            { $pull: { judgeScores: { judgeId } } }
+        );
+
+        // Push the new score using the $push operator
+        const updatedContestant = await Contestant.findByIdAndUpdate(
+            contestantId,
+            { $push: { judgeScores: { judgeId, score } } },
+            { new: true, runValidators: true }
+        );
+
+        return res.status(200).json({ success: true, data: updatedContestant });
+    } catch (error) {
+        console.error('Error submitting judge score:', error);
+        return res.status(500).json({ message: 'Server error while submitting score' });
+    }
+};

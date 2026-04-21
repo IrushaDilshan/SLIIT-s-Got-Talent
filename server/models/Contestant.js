@@ -58,6 +58,17 @@ const contestantSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  judgeScores: [{
+    judgeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    score: {
+      type: Number,
+      required: true
+    }
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Contestant', contestantSchema);

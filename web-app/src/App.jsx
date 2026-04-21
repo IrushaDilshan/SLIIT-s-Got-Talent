@@ -103,6 +103,14 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 
+        <Route
+          path="/judge-dashboard"
+          element={
+            <RequireAuth>
+              <JudgeDashboard />
+            </RequireAuth>
+          }
+        />
         <Route path="/judge-panel" element={<JudgePanelDashboard />} />
         <Route path="/final-leaderboard" element={<FinalLeaderboardDashboard />} />
         <Route path="/final-result" element={<FinalResult />} />

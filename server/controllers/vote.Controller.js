@@ -92,7 +92,7 @@ exports.castVote = async (req, res) => {
 exports.getVoteStats = async (req, res) => {
     try {
         const contestants = await Contestant.find({ status: 'approved' })
-            .select('name talentType description imageUrl votes')
+            .select('name talentType description imageUrl votes judgeScores')
             .sort({ votes: -1, createdAt: 1 });
 
         return res.status(200).json({

@@ -8,7 +8,8 @@ const {
     getContestantByIdAdmin,
     getMyApplication,
     updateContestant, 
-    deleteContestant 
+    deleteContestant,
+    submitJudgeScore
 } = require('../controllers/contestant.Controller');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
@@ -16,6 +17,9 @@ const { authorize } = require('../middleware/roleMiddleware');
 router.get('/', getContestants);
 router.get('/my-application', protect, getMyApplication);
 router.post('/', uploadContestantMedia, registerContestant);
+
+// Judge routes
+router.put('/:id/score', protect, authorize('judge'), submitJudgeScore);
 
 // Admin routes
 router.get('/admin', protect, authorize('admin'), getAllContestantsAdmin);
