@@ -1,3 +1,8 @@
+/**
+ * Database Configuration
+ * Handles MongoDB connection using Mongoose
+ */
+
 const mongoose = require('mongoose');
 
 /**
@@ -7,7 +12,8 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/sliit-talent';
+    const mongoURI =
+      process.env.MONGO_URI || 'mongodb://localhost:27017/sliit-talent';
 
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
@@ -36,7 +42,9 @@ const connectDB = async () => {
 
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log('MongoDB connection closed due to application termination');
+      console.log(
+        'MongoDB connection closed due to application termination'
+      );
       process.exit(0);
     });
 
@@ -44,12 +52,12 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB Connection Error:');
     console.error(`   ${error.message}`);
-    
+
     if (error.name === 'MongoNetworkError') {
       console.error('   Make sure MongoDB is running on localhost:27017');
       console.error('   Or update MONGO_URI in .env file');
     }
-    
+
     process.exit(1);
   }
 };

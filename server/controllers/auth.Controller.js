@@ -1,123 +1,210 @@
-const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
+/**
+ * Authentication Controller
+ * Handles judge login and registration
+ */
+
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// Generate JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
+/**
+ * Generate JWT token for user
+ * @param {string} userId - User ID from database
+ * @param {string} role - User role
+ * @returns {string} JWT token valid for 7 days
+ */
+const generateToken = (userId, role) => {
+  return jwt.sign(
+    { id: userId, role },
+    process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production_12345',
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+  );
 };
 
-// @desc    Register/Login user with OTP
-// @route   POST /api/auth/login
-// @access  Public
-exports.loginUser = async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ message: 'Please provide an email' });
-  }
-
-  // Validate SLIIT email
-  const sliitEmailRegex = /@(my\.)?sliit\.lk$/;
-  if (!sliitEmailRegex.test(email)) {
-    return res.status(400).json({ message: 'Please use a valid SLIIT email (@sliit.lk or @my.sliit.lk)' });
-  }
-
+/**
+ * Judge Login
+ * POST /api/auth/login
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ */
+exports.login = async (req, res) => {
   try {
-    let user = await User.findOne({ email });
+    const { email, password } = req.body;
 
-    if (!user) {
-      user = await User.create({ email });
-    }
-
-    // Generate specific 6-digit OTP
-    let otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // DEV: Default OTP for admin
-    if (email === 'admin@sliit.lk') {
-      otp = '123456';
-    }
-
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    user.otp = otp;
-    user.otpExpires = otpExpires;
-    await user.save();
-
-    console.log(`\n=== DEV MODE: OTP for ${email} is ${otp} ===\n`);
-
-    const message = `Your OTP for SLIIT's Got Talent login is: ${otp}.\nIt expires in 10 minutes.`;
-
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'SLIIT\'s Got Talent Login OTP',
-        message,
-      });
-
-      res.status(200).json({ success: true, message: 'OTP sent to email' });
-    } catch (error) {
-      console.error('Email send failed:', error.message);
-      // In development, allow login even if email fails
-      res.status(200).json({ 
-        success: true, 
-        message: 'Email failed. Check server console for OTP.',
-        devOtp: otp 
+    // Validation: Check email and password are provided
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password.',
       });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
-  }
-};
 
-// @desc    Verify OTP
-// @route   POST /api/auth/verify
-// @access  Public
-exports.verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
-
-  if (!email || !otp) {
-    return res.status(400).json({ message: 'Please provide email and OTP' });
-  }
-
-  try {
-    const user = await User.findOne({ email });
+    // Find user by email (must explicitly select password field since it's hidden by default)
+    const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password.',
+      });
     }
 
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account has been deactivated.',
+      });
     }
 
-    if (user.otpExpires < Date.now()) {
-      return res.status(400).json({ message: 'OTP expired' });
+    // Compare passwords using model method
+    const isPasswordCorrect = await user.matchPassword(password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password.',
+      });
     }
 
-    // OTP is valid
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
+    // Generate token
+    const token = generateToken(user._id, user.role);
 
-    res.status(200).json({
+    // Send response with token
+    return res.status(200).json({
       success: true,
-      token: generateToken(user._id),
+      message: 'Login successful.',
+      token,
       user: {
-        _id: user._id,
+        id: user._id,
+        name: user.name,
         email: user.email,
         role: user.role,
-        isVoted: user.isVoted,
-        votedCategories: user.votedCategories || [],
-        votedContestants: user.votedContestants || [],
+        panel: user.panel,
+        photo: user.photo,
       },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during login.',
+      error: error.message,
+    });
   }
 };
+
+/**
+ * Judge Register (Admin only)
+ * POST /api/auth/register
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ */
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, panel, photo } = req.body;
+
+    // Validation: Check all required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email, and password.',
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered.',
+      });
+    }
+
+    // Create new judge
+    const newJudge = await User.create({
+      name,
+      email,
+      password,
+      panel: panel || null,
+      photo: photo || null,
+      role: 'judge',
+      isActive: true,
+    });
+
+    // Generate token
+    const token = generateToken(newJudge._id, newJudge.role);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Judge registered successfully.',
+      token,
+      user: {
+        id: newJudge._id,
+        name: newJudge.name,
+        email: newJudge.email,
+        panel: newJudge.panel,
+        photo: newJudge.photo,
+      },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+
+    // Handle duplicate email error from MongoDB
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during registration.',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get Logged-In Judge Profile
+ * GET /api/auth/profile
+ * @param {object} req - Express request (requires auth)
+ * @param {object} res - Express response
+ */
+exports.getProfile = async (req, res) => {
+  try {
+    // req.userId is set by authMiddleware
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        panel: user.panel,
+        photo: user.photo,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while fetching profile.',
+      error: error.message,
+    });
+  }
+};
+
+module.exports = exports;
 
