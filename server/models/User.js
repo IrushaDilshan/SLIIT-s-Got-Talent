@@ -58,6 +58,16 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    // OTP fields for email-based authentication
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+      select: false,
+    },
+
     // Account creation and update timestamps
     createdAt: {
       type: Date,

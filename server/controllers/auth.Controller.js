@@ -21,30 +21,42 @@ const generateToken = (userId, role) => {
 };
 
 /**
- * Judge Login
+ * Judge Login - Request OTP
  * POST /api/auth/login
- * @param {object} req - Express request
- * @param {object} res - Express response
+ * Send OTP to user's email for verification
  */
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email } = req.body;
 
-    // Validation: Check email and password are provided
-    if (!email || !password) {
+    // Validation: Check email is provided
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password.',
+        message: 'Please provide email.',
       });
     }
 
-    // Find user by email (must explicitly select password field since it's hidden by default)
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user) {
-      return res.status(401).json({
+    // Validate SLIIT email
+    if (!/@(my\.)?sliit\.lk$/i.test(email)) {
+      return res.status(400).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Only @sliit.lk or @my.sliit.lk emails are allowed.',
+      });
+    }
+
+    // Find user by email or create new user if doesn't exist
+    let user = await User.findOne({ email });
+    
+    if (!user) {
+      // Auto-create user with SLIIT email
+      const name = email.split('@')[0]; // Use email prefix as name
+      user = await User.create({
+        name,
+        email,
+        password: require('crypto').randomBytes(16).toString('hex'), // Random password
+        role: 'judge',
+        isActive: true,
       });
     }
 
@@ -56,20 +68,91 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Compare passwords using model method
-    const isPasswordCorrect = await user.matchPassword(password);
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
+    // Save OTP to database
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    // Log OTP in console for development (since email not configured)
+    console.log(`\n✉️  OTP for ${email}: ${otp}`);
+    console.log(`⏰ OTP expires in 10 minutes\n`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email. (Check server console in dev mode)',
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during login.',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Verify OTP
+ * POST /api/auth/verify
+ * Verify OTP and generate JWT token
+ */
+exports.verify = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validation
+    if (!email || !otp) {
+      return res.status(400).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Please provide email and OTP.',
       });
     }
 
-    // Generate token
+    // Find user and get OTP (which is hidden by default)
+    const user = await User.findOne({ email }).select('+otp +otpExpiry');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    // Check if OTP exists and is not expired
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(401).json({
+        success: false,
+        message: 'OTP not requested. Please request OTP first.',
+      });
+    }
+
+    if (new Date() > user.otpExpiry) {
+      return res.status(401).json({
+        success: false,
+        message: 'OTP expired. Please request a new one.',
+      });
+    }
+
+    // Verify OTP
+    if (user.otp !== otp) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid OTP.',
+      });
+    }
+
+    // Clear OTP after successful verification
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    // Generate JWT token
     const token = generateToken(user._id, user.role);
 
-    // Send response with token
     return res.status(200).json({
       success: true,
       message: 'Login successful.',
@@ -84,10 +167,10 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Verify error:', error);
     return res.status(500).json({
       success: false,
-      message: 'An error occurred during login.',
+      message: 'An error occurred during verification.',
       error: error.message,
     });
   }

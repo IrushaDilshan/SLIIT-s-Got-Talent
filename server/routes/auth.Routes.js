@@ -12,8 +12,11 @@ const authMiddleware = require('../middleware/authMiddleware');
  * Public routes (no auth required)
  */
 
-// POST /api/auth/login - Judge login with email and password
+// POST /api/auth/login - Generate and send OTP to email
 router.post('/login', authController.login);
+
+// POST /api/auth/verify - Verify OTP and get JWT token
+router.post('/verify', authController.verify);
 
 // POST /api/auth/register - Register new judge (can be used for admin to create judges)
 router.post('/register', authController.register);
