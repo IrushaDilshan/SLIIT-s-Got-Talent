@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.jsx';
 import { api } from '../services/apiClient.js';
+import JudgePanelDashboard from './JudgePanelDashboard.jsx';
 
 export default function JudgeDashboard() {
-  const { user, isAuthed, token } = useAuth();
+  const { user, isAuthed, token, clearSession } = useAuth();
   const [contestants, setContestants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
+
+  const logout = () => {
+    clearSession();
+  };
   
   // Quick redirection if not judge
   if (!isAuthed || user?.role !== 'judge') {
@@ -23,7 +28,8 @@ export default function JudgeDashboard() {
     try {
       setLoading(true);
       const res = await api.get({ path: '/contestants', token });
-      setContestants(res.data || []);
+      const dataArray = Array.isArray(res) ? res : (res.data || []);
+      setContestants(dataArray);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -49,10 +55,10 @@ export default function JudgeDashboard() {
             </div>
             
             <nav style={styles.sidebarNav}>
-              {['Dashboard', 'Live Event', 'Evaluate', 'Settings'].map((tab) => (
+              {['Dashboard', 'Evaluate', 'Settings'].map((tab) => (
                 <button 
                   key={tab} 
-
+                  onClick={() => setActiveTab(tab)}
                   style={{...styles.navItem, ...(activeTab === tab ? styles.navItemActive : {})}}
                 >
                   <span style={styles.navItemText}>{tab}</span>
@@ -78,18 +84,50 @@ export default function JudgeDashboard() {
         <main style={styles.mainContent}>
           <header style={styles.topHeader}>
             <h1 style={styles.pageTitle}>{activeTab}</h1>
-            <div style={styles.headerActions}>
-              <span style={styles.liveIndicator}>
-                <span style={styles.pulseDot}></span>
-                Live Event Active
-              </span>
-            </div>
           </header>
 
-          <div style={styles.contentBody}>
-            {activeTab !== 'Dashboard' ? (
-              <div style={styles.placeholderArea}>
-                <p>{activeTab} module is coming soon.</p>
+          <div style={styles.contentScrollable}>
+            {activeTab === 'Evaluate' ? (
+              <JudgePanelDashboard embedded={true} />
+            ) : activeTab === 'Settings' ? (
+              <div style={styles.settingsGrid}>
+                <div style={styles.settingsCard}>
+                  <h3 style={styles.settingsTitle}>Account Profile</h3>
+                  <div style={styles.profileRow}>
+                    <div style={styles.judgeAvatarLarge}>JD</div>
+                    <div>
+                      <p style={styles.settingsLabel}>Email Address</p>
+                      <p style={styles.settingsValue}>{user?.email}</p>
+                      <p style={styles.settingsLabel}>Assigned Role</p>
+                      <p style={styles.settingsValue}>{user?.role}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.settingsCard}>
+                  <h3 style={styles.settingsTitle}>Evaluation Preferences</h3>
+                  <div style={styles.prefRow}>
+                    <div>
+                      <p style={styles.settingsValue}>Auto-Advance Queue</p>
+                      <p style={styles.settingsLabel}>Automatically select the next contestant after submitting a score.</p>
+                    </div>
+                    <label style={styles.toggleSwitch}>
+                      <input type="checkbox" defaultChecked />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                  
+                  <div style={styles.prefRow}>
+                    <div>
+                      <p style={styles.settingsValue}>Haptic Feedback</p>
+                      <p style={styles.settingsLabel}>Enable structural alerts when modifying score constraints.</p>
+                    </div>
+                    <label style={styles.toggleSwitch}>
+                      <input type="checkbox" />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                </div>
               </div>
             ) : loading ? (
               <div style={styles.loaderArea}>
@@ -121,7 +159,7 @@ export default function JudgeDashboard() {
                     </div>
                     
                     <div style={styles.cardFooter}>
-                      <button style={styles.evalBtn}>
+                      <button style={styles.scoreBtn} onClick={() => setActiveTab('Evaluate')}>
                         Evaluate Performance
                       </button>
                     </div>
@@ -413,5 +451,105 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s',
+  },
+  settingsGrid: {
+    display: 'grid',
+    gap: '24px',
+    maxWidth: '800px',
+  },
+  settingsCard: {
+    background: 'linear-gradient(145deg, rgba(20, 25, 45, 0.65), rgba(10, 15, 30, 0.8))',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '24px',
+    padding: '30px',
+  },
+  settingsTitle: {
+    margin: '0 0 24px 0',
+    fontSize: '20px',
+    fontWeight: '800',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    paddingBottom: '16px',
+    color: '#f8fafc',
+  },
+  profileRow: {
+    display: 'flex',
+    gap: '24px',
+    alignItems: 'center',
+  },
+  judgeAvatarLarge: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '40px',
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    color: '#38bdf8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '28px',
+    fontWeight: '900',
+  },
+  settingsLabel: {
+    margin: '0 0 4px 0',
+    color: '#94a3b8',
+    fontSize: '13px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  settingsValue: {
+    margin: '0 0 16px 0',
+    color: '#f8fafc',
+    fontSize: '16px',
+    fontWeight: '600',
+  },
+  prefRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 0',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+  },
+  toggleSwitch: {
+    position: 'relative',
+    display: 'inline-block',
+    width: '50px',
+    height: '28px',
   }
 };
+
+const extendedStyles = `
+  .toggleSwitch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggleSwitch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255,255,255,0.1);
+    transition: .4s;
+    border-radius: 34px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .toggleSwitch .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  .toggleSwitch input:checked + .slider {
+    background-color: #50ffa3;
+    border-color: #50ffa3;
+  }
+  .toggleSwitch input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: #0b1020;
+  }
+`;
+
+document.head.insertAdjacentHTML('beforeend', `<style>${extendedStyles}</style>`);

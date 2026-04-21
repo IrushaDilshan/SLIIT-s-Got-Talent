@@ -4,6 +4,21 @@ import { useAuth } from '../components/AuthContext.jsx';
 import { FiRefreshCw, FiAward, FiStar, FiTrendingUp } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 
+function calculateWeightedScore(contestant) {
+  const publicMax = 1000;
+  const judgeMax = 100;
+
+  const publicPercent = ((contestant.votes || 0) / publicMax) * 100;
+  
+  const scores = contestant.judgeScores || [];
+  const totalJudgeScore = scores.reduce((sum, s) => sum + s.score, 0);
+  const avgScore = scores.length > 0 ? totalJudgeScore / scores.length : 0;
+  
+  const judgePercent = (avgScore / judgeMax) * 100;
+  
+  return Number((publicPercent * 0.4 + judgePercent * 0.6).toFixed(1));
+}
+
 export default function RankingsPage() {
   const { token, user, clearSession } = useAuth();
   const navigate = useNavigate();
@@ -60,8 +75,10 @@ export default function RankingsPage() {
     ? rows 
     : groupedData[activeCategory] || [];
 
-  // Sort by highest votes first just in case
-  const sortedData = [...filteredData].sort((a, b) => b.votes - a.votes);
+  // Calculate final score and sort
+  const sortedData = [...filteredData]
+    .map(c => ({...c, finalScore: calculateWeightedScore(c)}))
+    .sort((a, b) => b.finalScore - a.finalScore);
 
   return (
     <div style={{ backgroundColor: '#09090b', color: '#ffffff', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -175,8 +192,8 @@ export default function RankingsPage() {
                  </div>
                  
                  <div style={styles.voteDisplay}>
-                   <span style={styles.voteCount}>{c.votes || 0}</span>
-                   <span style={styles.voteLabel}>Votes</span>
+                   <span style={styles.voteCount}>{c.finalScore || 0}</span>
+                   <span style={styles.voteLabel}>Final Score</span>
                  </div>
                </div>
              ))}

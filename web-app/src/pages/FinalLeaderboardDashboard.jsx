@@ -1,84 +1,68 @@
-import React, { useMemo, useState } from "react";
-
-const initialContestants = [
-  {
-    id: 1,
-    name: "Amandi Perera",
-    category: "Singing",
-    publicVotes: 920,
-    maxVotes: 1000,
-    judgeScore: 36,
-    maxJudgeScore: 40,
-    trend: [72, 78, 81, 84, 88, 92],
-    status: "Rising",
-  },
-  {
-    id: 2,
-    name: "Kasun Madushan",
-    category: "Dancing",
-    publicVotes: 870,
-    maxVotes: 1000,
-    judgeScore: 34,
-    maxJudgeScore: 40,
-    trend: [65, 71, 74, 79, 83, 87],
-    status: "Stable",
-  },
-  {
-    id: 3,
-    name: "Nethmi Silva",
-    category: "Drama",
-    publicVotes: 790,
-    maxVotes: 1000,
-    judgeScore: 38,
-    maxJudgeScore: 40,
-    trend: [60, 64, 69, 75, 78, 82],
-    status: "Rising",
-  },
-  {
-    id: 4,
-    name: "Ravindu Senanayake",
-    category: "Beatboxing",
-    publicVotes: 840,
-    maxVotes: 1000,
-    judgeScore: 32,
-    maxJudgeScore: 40,
-    trend: [67, 70, 73, 77, 81, 84],
-    status: "Stable",
-  },
-  {
-    id: 5,
-    name: "Ishara Fernando",
-    category: "Instrumental",
-    publicVotes: 710,
-    maxVotes: 1000,
-    judgeScore: 35,
-    maxJudgeScore: 40,
-    trend: [50, 56, 61, 67, 70, 74],
-    status: "Improving",
-  },
-  {
-    id: 6,
-    name: "Sanduni Jayasinghe",
-    category: "Comedy",
-    publicVotes: 760,
-    maxVotes: 1000,
-    judgeScore: 30,
-    maxJudgeScore: 40,
-    trend: [55, 59, 62, 66, 71, 76],
-    status: "Improving",
-  },
-];
+import React, { useMemo, useState, useEffect } from "react";
+import { api } from '../services/apiClient.js';
 
 function calculateWeightedScore(contestant) {
-  const publicPercent = (contestant.publicVotes / contestant.maxVotes) * 100;
-  const judgePercent = (contestant.judgeScore / contestant.maxJudgeScore) * 100;
+  // Use dynamically calculated maxes from the API response mapping
+  const publicMax = contestant.maxVotes || 1000;
+  const judgeMax = contestant.maxJudgeScore || 100;
+
+  const publicPercent = (contestant.publicVotes / publicMax) * 100;
+  const judgePercent = (contestant.judgeScore / judgeMax) * 100;
   return Number((publicPercent * 0.4 + judgePercent * 0.6).toFixed(1));
 }
 
 function FinalLeaderboardDashboard() {
-  const [contestants] = useState(initialContestants);
+  const [contestants, setContestants] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveStats = async () => {
+      try {
+        const res = await api.get({ path: '/contestants' });
+        if (!isMounted) return;
+
+        const dataArray = Array.isArray(res) ? res : (res.data || []);
+        const liveData = dataArray.map(c => {
+          // Calculate average judge score from array of score objects
+          const scores = c.judgeScores || [];
+          const totalJudgeScore = scores.reduce((sum, s) => sum + s.score, 0);
+          const avgJudgeScore = scores.length > 0 ? totalJudgeScore / scores.length : 0;
+
+          return {
+            id: c._id,
+            name: c.name,
+            category: c.talentType || "General",
+            publicVotes: c.votes || 0,
+            maxVotes: 1000, // Assuming 1000 is our cap for 100% normalization
+            judgeScore: avgJudgeScore,
+            maxJudgeScore: 100, // Judges score out of 100
+            trend: [40, 50, 60, 70, 80], // Hardcoded trends for UI purposes
+            status: "Stable"
+          };
+        });
+
+        setContestants(liveData);
+      } catch (err) {
+        console.error("Leaderboard fetch failed:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchLiveStats();
+    
+    // Setup 5-second polling interval
+    const intervalId = setInterval(fetchLiveStats, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const categories = ["All", ...new Set(contestants.map((c) => c.category))];
 
@@ -640,8 +624,16 @@ function FinalLeaderboardDashboard() {
           }
         }
       `}</style>
-
-      <div className="topbar">
+      
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: '#ec4899', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+          <h2 style={{ marginTop: '20px', fontWeight: '600' }}>Starting Live Dashboard...</h2>
+          <p style={{ color: '#94a3b8' }}>Gathering synchronized public votes and judge scores.</p>
+        </div>
+      ) : (
+        <>
+          <div className="topbar">
         <div className="brand">
           <h1>SLIIT’s Got Talent - Final Leaderboard</h1>
           <p>
@@ -980,6 +972,8 @@ function FinalLeaderboardDashboard() {
           </div>
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }
