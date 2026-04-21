@@ -64,7 +64,7 @@ export default function VotingScreen({ navigation }) {
             if (setRes.data && setRes.data.categories) {
                 setCategories(['All', ...setRes.data.categories]);
             } else {
-                setCategories(['All', 'Singing', 'Dancing', 'Other']);
+                setCategories(['All', 'Music', 'Singing', 'Dancing', 'Magic']);
             }
             if (setRes.data && setRes.data.countdownEnd) {
                 const endT = new Date(setRes.data.countdownEnd).getTime();
@@ -151,12 +151,19 @@ export default function VotingScreen({ navigation }) {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    // Helper to extract the proper category property
+    const getCategory = (item) => isDummyData ? item.category : item.talentType;
+
     const filteredContestants = selectedCategory === 'All'
         ? contestants
-        : contestants.filter(c => c.talentType === selectedCategory || (c.talentType || '').includes(selectedCategory));
+        : contestants.filter(c => {
+            const cat = getCategory(c);
+            return String(cat || '').toLowerCase() === String(selectedCategory).toLowerCase();
+        });
 
     const renderContestant = ({ item }) => {
-        const hasVotedInCategory = votedCategories.includes(item.talentType);
+        const cat = getCategory(item);
+        const hasVotedInCategory = votedCategories.includes(cat);
         const hasVotedForThis = votedContestants.includes(item._id);
 
         return (
@@ -174,7 +181,7 @@ export default function VotingScreen({ navigation }) {
                 <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
                         <View style={styles.tagContainer}>
-                            <Text style={styles.categoryTag}>{item.talentType || 'Talent'}</Text>
+                            <Text style={styles.categoryTag}>{cat || 'Talent'}</Text>
                         </View>
                         {hasVotedForThis && (
                             <View style={styles.votedBadge}>
@@ -189,7 +196,7 @@ export default function VotingScreen({ navigation }) {
                     </Text>
 
                     <TouchableOpacity
-                        onPress={() => handleVote(item._id, item.name, item.talentType)}
+                        onPress={() => handleVote(item._id, item.name, cat)}
                         disabled={hasVotedInCategory || votingLoading}
                         activeOpacity={0.8}
                         style={styles.voteBtnContainer}

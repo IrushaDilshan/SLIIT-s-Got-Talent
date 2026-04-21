@@ -21,6 +21,21 @@ export default function LeaderboardScreen({ navigation }) {
   const [totalVotes, setTotalVotes] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
 
+  const calculateWeightedScore = (contestant) => {
+    const publicMax = 1000;
+    const judgeMax = 100;
+
+    const publicPercent = ((contestant.votes || 0) / publicMax) * 100;
+    
+    const scores = contestant.judgeScores || [];
+    const totalJudgeScore = scores.reduce((sum, s) => sum + s.score, 0);
+    const avgScore = scores.length > 0 ? totalJudgeScore / scores.length : 0;
+    
+    const judgePercent = (avgScore / judgeMax) * 100;
+    
+    return Number((publicPercent * 0.4 + judgePercent * 0.6).toFixed(1));
+  };
+
   const fetchStats = async () => {
     try {
       const res = await votesAPI.getStats();
@@ -58,7 +73,7 @@ export default function LeaderboardScreen({ navigation }) {
     });
     return Object.keys(map).map(category => ({
       title: category,
-      data: map[category].sort((a, b) => b.votes - a.votes)
+      data: map[category].map(c => ({...c, finalScore: calculateWeightedScore(c)})).sort((a, b) => b.finalScore - a.finalScore)
     })).sort((a, b) => a.title.localeCompare(b.title));
   };
 
@@ -78,7 +93,8 @@ export default function LeaderboardScreen({ navigation }) {
                        isBronze ? '#CD7F32' :
                        'transparent';
 
-    const percent = totalVotes > 0 ? ((item.votes / totalVotes) * 100).toFixed(1) : 0;
+    const finalScore = item.finalScore || 0;
+    const percent = finalScore.toFixed(1);
 
     return (
       <View style={[styles.card, isTop3 && styles.topCard]}>
@@ -114,8 +130,8 @@ export default function LeaderboardScreen({ navigation }) {
           </View>
 
           <View style={styles.votesContainer}>
-            <Text style={styles.votesValue}>{item.votes}</Text>
-            <Text style={styles.votesLabel}>VOTES</Text>
+            <Text style={styles.votesValue}>{finalScore}</Text>
+            <Text style={styles.votesLabel}>FINAL SCORE</Text>
           </View>
         </View>
 

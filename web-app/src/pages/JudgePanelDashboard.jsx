@@ -1,63 +1,74 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useAuth } from '../components/AuthContext.jsx';
+import { api } from '../services/apiClient.js';
 
 const JudgePanelDashboard = ({ embedded = false }) => {
-  const [loggedInJudge] = useState({
-    id: 2,
-    name: "Judge Nethmi Fernando",
+  const { user, token } = useAuth();
+  
+  const loggedInJudge = useMemo(() => ({
+    id: user?._id || 2,
+    name: user?.email?.split('@')[0] || "Judge",
     role: "Professional Judge",
-    panel: "SLIIT Got Talent 2026",
-    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-    email: "nethmi.judge@sliit.com",
-  });
+    photo: "https://ui-avatars.com/api/?name=" + (user?.email?.split('@')[0] || "Judge"),
+    email: user?.email,
+  }), [user]);
 
   const [message, setMessage] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeContestantId, setActiveContestantId] = useState(1);
+  const [activeContestantId, setActiveContestantId] = useState(null);
 
-  // Contestants ලගේ data වලට photo URL එකක් එකතු කරලා තියෙනවා
-  const [contestants] = useState([
-    {
-      id: 1,
-      name: "Amandi Perera",
-      category: "Singing",
-      round: "Semi Final",
-      performanceTitle: "Echoes of You",
-      photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
-      status: "Ready for Review",
-      timeSlot: "07:30 PM",
-    },
-    {
-      id: 2,
-      name: "Kasun Madushan",
-      category: "Dancing",
-      round: "Semi Final",
-      performanceTitle: "Rhythm X Motion",
-      photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80",
-      status: "Scoring In Progress",
-      timeSlot: "07:45 PM",
-    },
-    {
-      id: 3,
-      name: "Nethmi Silva",
-      category: "Drama",
-      round: "Semi Final",
-      performanceTitle: "Silent Stage",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-      status: "Ready for Review",
-      timeSlot: "08:00 PM",
-    },
-    {
-      id: 4,
-      name: "Ravindu Senanayake",
-      category: "Beatboxing",
-      round: "Semi Final",
-      performanceTitle: "Pulse Machine",
-      photo: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=150&q=80",
-      status: "Top Rated",
-      timeSlot: "08:15 PM",
-    },
-  ]);
+  const [contestants, setContestants] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContestants = async () => {
+      try {
+        const res = await api.get({ path: '/contestants', token });
+        const dataArray = Array.isArray(res) ? res : (res.data || []);
+        
+        const initialSubmitted = {};
+        const initialScores = {};
+
+        const formatted = dataArray.map(c => {
+          const myScoreObj = (c.judgeScores || []).find(s => s.judgeId === loggedInJudge.id);
+          
+          if (myScoreObj) {
+            initialSubmitted[c._id] = { judgeId: loggedInJudge.id, contestantId: c._id, judgeScore: myScoreObj.score };
+            
+            const base = Math.floor(myScoreObj.score / 4);
+            const rem = myScoreObj.score % 4;
+            initialScores[c._id] = {
+              creativity: base + rem,
+              presentation: base,
+              skillLevel: base,
+              audienceImpact: base
+            };
+          }
+
+          return {
+            id: c._id,
+            name: c.name,
+            category: c.talentType || "General",
+            performanceTitle: c.description || "N/A",
+            photo: c.imageUrl ? (api.toServerAssetUrl?.(c.imageUrl) || c.imageUrl) : "https://ui-avatars.com/api/?name=" + c.name,
+            status: "Ready for Review",
+            timeSlot: "TBA"
+          };
+        });
+        
+        setContestants(formatted);
+        setSubmittedResults(initialSubmitted);
+        setScores(initialScores);
+        if (formatted.length > 0) setActiveContestantId(formatted[0].id);
+      } catch (err) {
+        console.error("Failed to load contestants:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchContestants();
+  }, [token, loggedInJudge.id]);
 
   const [scores, setScores] = useState({});
   const [submittedResults, setSubmittedResults] = useState({});
@@ -95,25 +106,38 @@ const JudgePanelDashboard = ({ embedded = false }) => {
     return (s.creativity || 0) + (s.presentation || 0) + (s.skillLevel || 0) + (s.audienceImpact || 0);
   };
 
-  const handleSubmit = (contestant) => {
+  const handleSubmit = async (contestant) => {
     const judgeTotal = calculateJudgeTotal(contestant.id);
-    const result = {
-      judgeId: loggedInJudge.id,
-      contestantId: contestant.id,
-      judgeScore: judgeTotal,
-      criteria: scores[contestant.id] || {},
-    };
+    
+    try {
+      await api.put({
+        path: `/contestants/${contestant.id}/score`,
+        body: { score: judgeTotal },
+        token
+      });
 
-    setSubmittedResults((prev) => ({ ...prev, [contestant.id]: result }));
-    setMessage(`✅ Score submitted for ${contestant.name}: ${judgeTotal}/100`);
-    
-    // Auto-select next contestant
-    const currentIndex = filteredContestants.findIndex(c => c.id === contestant.id);
-    if (currentIndex < filteredContestants.length - 1) {
-      setTimeout(() => setActiveContestantId(filteredContestants[currentIndex + 1].id), 1500);
+      const result = {
+        judgeId: loggedInJudge.id,
+        contestantId: contestant.id,
+        judgeScore: judgeTotal,
+        criteria: scores[contestant.id] || {},
+      };
+
+      setSubmittedResults((prev) => ({ ...prev, [contestant.id]: result }));
+      setMessage(`✅ Score submitted for ${contestant.name}: ${judgeTotal}/100`);
+      
+      // Auto-select next contestant
+      const currentIndex = filteredContestants.findIndex(c => c.id === contestant.id);
+      if (currentIndex < filteredContestants.length - 1) {
+        setTimeout(() => setActiveContestantId(filteredContestants[currentIndex + 1].id), 1500);
+      }
+      
+      setTimeout(() => setMessage(""), 4000);
+    } catch (err) {
+      console.error(err);
+      setMessage(`❌ Failed to submit score: ${err.message}`);
+      setTimeout(() => setMessage(""), 4000);
     }
-    
-    setTimeout(() => setMessage(""), 4000);
   };
 
   const scoreboard = contestants
@@ -128,12 +152,69 @@ const JudgePanelDashboard = ({ embedded = false }) => {
     })
     .sort((a, b) => b.judgeScore - a.judgeScore);
 
+  if (loading) {
+    return <div style={{...styles.page, ...(embedded ? styles.embeddedPage : {}), display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#fff'}}>Loading Stage...</h2></div>;
+  }
+
+  if (contestants.length === 0) {
+    return <div style={{...styles.page, ...(embedded ? styles.embeddedPage : {}), display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#fff'}}>No Contestants Found</h2></div>;
+  }
+
   const activeContestant = contestants.find((c) => c.id === activeContestantId) || contestants[0];
   const activeTotal = calculateJudgeTotal(activeContestant.id);
   const isSubmitted = !!submittedResults[activeContestant.id];
 
   return (
-    <div style={{...styles.page, ...(embedded ? styles.embeddedPage : {})}}>
+    <div style={{...styles.page, ...(embedded ? styles.embeddedPage : {})}} className="judge-panel">
+      
+      <style>{`
+        .judge-panel input[type=range] {
+          -webkit-appearance: none;
+          width: 100%;
+          background: rgba(255,255,255,0.05);
+          height: 8px;
+          border-radius: 4px;
+          outline: none;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .judge-panel input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #23c9ff;
+          cursor: pointer;
+          border: 3px solid #111832;
+          box-shadow: 0 0 12px rgba(35, 201, 255, 0.6);
+          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .judge-panel input[type=range]::-webkit-slider-thumb:hover {
+          transform: scale(1.3);
+          background: #50ffa3;
+          box-shadow: 0 0 15px rgba(80, 255, 163, 0.8);
+        }
+        .queueCard:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .quickBtnClass:hover {
+          background: rgba(255,255,255,0.1) !important;
+          transform: scale(1.05);
+        }
+        .focus-banner {
+          animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .judge-panel select option {
+          background-color: #111832;
+          color: #ffffff;
+        }
+        @keyframes slideDown {
+          0% { opacity: 0; transform: translateY(-20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       {!embedded && <div style={styles.bgOrbOne} />}
       {!embedded && <div style={styles.bgOrbTwo} />}
 
@@ -214,7 +295,7 @@ const JudgePanelDashboard = ({ embedded = false }) => {
           </div>
 
           {/* FOCUS SCORING AREA */}
-          <div style={styles.focusCard}>
+          <div style={styles.focusCard} className="focus-banner">
             <div style={styles.focusHeader}>
               <div style={styles.focusProfile}>
                 <img src={activeContestant.photo} alt={activeContestant.name} style={styles.avatarHuge} />
@@ -261,6 +342,7 @@ const JudgePanelDashboard = ({ embedded = false }) => {
                           <button 
                             key={num} 
                             onClick={() => handleScoreChange(activeContestant.id, criterion.key, num)}
+                            className="quickBtnClass"
                             style={val === num ? styles.quickBtnActive : styles.quickBtn}
                           >
                             {num}
@@ -291,11 +373,13 @@ const JudgePanelDashboard = ({ embedded = false }) => {
               {filteredContestants.map(c => (
                 <div 
                   key={c.id} 
+                  className="queueCard"
                   onClick={() => setActiveContestantId(c.id)}
                   style={{
                     ...styles.queueCard,
                     borderColor: activeContestantId === c.id ? "#23c9ff" : "rgba(255,255,255,0.08)",
-                    background: activeContestantId === c.id ? "rgba(35, 201, 255, 0.1)" : "rgba(255,255,255,0.03)"
+                    background: activeContestantId === c.id ? "rgba(35, 201, 255, 0.15)" : "rgba(255,255,255,0.03)",
+                    boxShadow: activeContestantId === c.id ? "0 0 20px rgba(35, 201, 255, 0.2)" : "none"
                   }}
                 >
                   <img src={c.photo} alt={c.name} style={styles.queueAvatar} />
@@ -316,11 +400,11 @@ const JudgePanelDashboard = ({ embedded = false }) => {
 
 // Styling Object
 const glass = {
-  background: "rgba(16, 22, 45, 0.6)",
-  backdropFilter: "blur(20px)",
-  WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+  background: "linear-gradient(145deg, rgba(20, 25, 45, 0.65), rgba(10, 15, 30, 0.8))",
+  backdropFilter: "blur(24px)",
+  WebkitBackdropFilter: "blur(24px)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  boxShadow: "0 24px 48px rgba(0,0,0,0.3)",
 };
 
 const styles = {
@@ -366,15 +450,15 @@ const styles = {
   statusDot: { width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#50ffa3", boxShadow: "0 0 10px rgba(80, 255, 163, 0.6)" },
 
   filterBar: { display: "flex", gap: "12px", marginBottom: "10px" },
-  input: { flex: 1, maxWidth: "350px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff" },
-  select: { width: "180px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff" },
+  input: { flex: 1, maxWidth: "350px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)", color: "#fff", transition: "0.2s" },
+  select: { width: "180px", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)", color: "#fff" },
   
-  focusCard: { ...glass, borderRadius: "24px", padding: "30px", borderTop: "4px solid #6f4cff" },
+  focusCard: { ...glass, borderRadius: "28px", padding: "34px", position: "relative", overflow: "hidden" },
   focusHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", flexWrap: "wrap", gap: "20px" },
   focusProfile: { display: "flex", alignItems: "center", gap: "20px" },
   
   // Huge photo style for focus area 👇
-  avatarHuge: { width: "86px", height: "86px", borderRadius: "20px", objectFit: "cover", flexShrink: 0, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" },
+  avatarHuge: { width: "96px", height: "96px", borderRadius: "24px", objectFit: "cover", flexShrink: 0, boxShadow: "0 10px 30px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.1)" },
   
   categoryBadge: { display: "inline-block", background: "rgba(35, 201, 255, 0.15)", color: "#23c9ff", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "bold", marginBottom: "8px" },
   focusName: { margin: 0, fontSize: "26px", fontWeight: "800" },

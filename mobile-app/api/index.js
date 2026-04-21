@@ -2,8 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Use your machine's local IP address instead of localhost for physical devices/emulators
-// Expo host IPv4: 172.20.10.5
-const API_BASE_URL = 'http://172.20.10.5:5000/api';
+// Android Emulator Host IPv4 alias is 10.0.2.2
+const API_BASE_URL = 'http://10.0.2.2:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
