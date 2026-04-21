@@ -1,86 +1,48 @@
-import React, { useMemo, useState } from "react";
-
-const initialContestants = [
-  {
-    id: 1,
-    name: "Amandi Perera",
-    category: "Singing",
-    publicVotes: 920,
-    maxVotes: 1000,
-    judgeScore: 36,
-    maxJudgeScore: 40,
-    trend: [72, 78, 81, 84, 88, 92],
-    status: "Rising",
-  },
-  {
-    id: 2,
-    name: "Kasun Madushan",
-    category: "Dancing",
-    publicVotes: 870,
-    maxVotes: 1000,
-    judgeScore: 34,
-    maxJudgeScore: 40,
-    trend: [65, 71, 74, 79, 83, 87],
-    status: "Stable",
-  },
-  {
-    id: 3,
-    name: "Nethmi Silva",
-    category: "Drama",
-    publicVotes: 790,
-    maxVotes: 1000,
-    judgeScore: 38,
-    maxJudgeScore: 40,
-    trend: [60, 64, 69, 75, 78, 82],
-    status: "Rising",
-  },
-  {
-    id: 4,
-    name: "Ravindu Senanayake",
-    category: "Beatboxing",
-    publicVotes: 840,
-    maxVotes: 1000,
-    judgeScore: 32,
-    maxJudgeScore: 40,
-    trend: [67, 70, 73, 77, 81, 84],
-    status: "Stable",
-  },
-  {
-    id: 5,
-    name: "Ishara Fernando",
-    category: "Instrumental",
-    publicVotes: 710,
-    maxVotes: 1000,
-    judgeScore: 35,
-    maxJudgeScore: 40,
-    trend: [50, 56, 61, 67, 70, 74],
-    status: "Improving",
-  },
-  {
-    id: 6,
-    name: "Sanduni Jayasinghe",
-    category: "Comedy",
-    publicVotes: 760,
-    maxVotes: 1000,
-    judgeScore: 30,
-    maxJudgeScore: 40,
-    trend: [55, 59, 62, 66, 71, 76],
-    status: "Improving",
-  },
-];
+import React, { useMemo, useState, useEffect } from "react";
+import judgeApi from "../services/judgeApi";
 
 function calculateWeightedScore(contestant) {
-  const publicPercent = (contestant.publicVotes / contestant.maxVotes) * 100;
-  const judgePercent = (contestant.judgeScore / contestant.maxJudgeScore) * 100;
+  const publicPercent = (contestant.publicVotePercent) || 0;
+  const judgePercent = (contestant.judgeScorePercent) || 0;
   return Number((publicPercent * 0.4 + judgePercent * 0.6).toFixed(1));
 }
 
 function FinalLeaderboardDashboard() {
-  const [contestants] = useState(initialContestants);
+  const [contestants, setContestants] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [statistics, setStatistics] = useState(null);
 
-  const categories = ["All", ...new Set(contestants.map((c) => c.category))];
+  // Fetch final leaderboard data on component mount
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await judgeApi.getFinalLeaderboard();
+        
+        if (response && response.data) {
+          const leaderboardData = response.data.leaderboard || [];
+          setContestants(leaderboardData);
+          setStatistics(response.data.statistics || null);
+        }
+      } catch (err) {
+        console.error('Error fetching final leaderboard:', err);
+        setError(err.message || 'Failed to load leaderboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, []);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(contestants.map(c => c.category));
+    return ["All", ...Array.from(uniqueCategories).sort()];
+  }, [contestants]);
 
   const filteredContestants = useMemo(() => {
     return contestants.filter((contestant) => {
@@ -99,39 +61,69 @@ function FinalLeaderboardDashboard() {
     return [...filteredContestants]
       .map((contestant) => ({
         ...contestant,
-        weightedScore: calculateWeightedScore(contestant),
-        publicPercent: Math.round(
-          (contestant.publicVotes / contestant.maxVotes) * 100
-        ),
-        judgePercent: Math.round(
-          (contestant.judgeScore / contestant.maxJudgeScore) * 100
-        ),
+        weightedScore: contestant.weightedScore || calculateWeightedScore(contestant),
       }))
       .sort((a, b) => b.weightedScore - a.weightedScore);
   }, [filteredContestants]);
 
   const topThree = rankedContestants.slice(0, 3);
 
-  const totalVotes = rankedContestants.reduce(
-    (sum, contestant) => sum + contestant.publicVotes,
-    0
-  );
-
-  const avgJudgeScore =
-    rankedContestants.length > 0
-      ? (
-          rankedContestants.reduce(
-            (sum, contestant) => sum + contestant.judgeScore,
-            0
-          ) / rankedContestants.length
-        ).toFixed(1)
-      : 0;
-
-  const highestScore =
-    rankedContestants.length > 0 ? rankedContestants[0].weightedScore : 0;
+  const totalVotes = statistics?.totalVotes || 0;
+  const avgJudgeScore = statistics?.averageJudgeScore || 0;
+  const highestScore = statistics?.highestWeightedScore || 0;
 
   const voteBars = rankedContestants.slice(0, 5);
   const judgeBars = rankedContestants.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #0b1020 0%, #111827 100%)',
+        color: '#f8fafc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>Loading leaderboard...</h2>
+          <p style={{ color: '#cbd5e1' }}>Fetching final results from database</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #0b1020 0%, #111827 100%)',
+        color: '#f8fafc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ color: '#ef4444' }}>Error Loading Leaderboard</h2>
+          <p style={{ color: '#cbd5e1' }}>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              background: '#3b82f6',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="leaderboard-shell">
@@ -723,7 +715,7 @@ function FinalLeaderboardDashboard() {
                   <div className="podium-meta">
                     Votes: {topThree[1].publicVotes}/{topThree[1].maxVotes}
                     <br />
-                    Judge: {topThree[1].judgeScore}/{topThree[1].maxJudgeScore}
+                    Judge: {topThree[1].averageJudgeScore}/{topThree[1].maxJudgeScore}
                   </div>
                 </div>
               )}
@@ -737,7 +729,7 @@ function FinalLeaderboardDashboard() {
                   <div className="podium-meta">
                     Votes: {topThree[0].publicVotes}/{topThree[0].maxVotes}
                     <br />
-                    Judge: {topThree[0].judgeScore}/{topThree[0].maxJudgeScore}
+                    Judge: {topThree[0].averageJudgeScore}/{topThree[0].maxJudgeScore}
                   </div>
                 </div>
               )}
@@ -751,7 +743,7 @@ function FinalLeaderboardDashboard() {
                   <div className="podium-meta">
                     Votes: {topThree[2].publicVotes}/{topThree[2].maxVotes}
                     <br />
-                    Judge: {topThree[2].judgeScore}/{topThree[2].maxJudgeScore}
+                    Judge: {topThree[2].averageJudgeScore}/{topThree[2].maxJudgeScore}
                   </div>
                 </div>
               )}
@@ -799,7 +791,7 @@ function FinalLeaderboardDashboard() {
                   <div className="smart-title">Best Judge Mark</div>
                   <div className="smart-value">
                     {rankedContestants.length
-                      ? Math.max(...rankedContestants.map((item) => item.judgeScore))
+                      ? Math.max(...rankedContestants.map((item) => item.averageJudgeScore || 0))
                       : 0}
                     /40
                   </div>
@@ -845,7 +837,7 @@ function FinalLeaderboardDashboard() {
             </div>
 
             {rankedContestants.map((contestant, index) => (
-              <div className="table-row" key={contestant.id}>
+              <div className="table-row" key={contestant.contestantId}>
                 <div>
                   <div className="rank-pill">{index + 1}</div>
                 </div>
@@ -857,12 +849,12 @@ function FinalLeaderboardDashboard() {
 
                 <div>
                   <div className="score-big">{contestant.publicVotes}</div>
-                  <div className="mini-text">{contestant.publicPercent}% normalized</div>
+                  <div className="mini-text">{contestant.publicVotePercent}% normalized</div>
                 </div>
 
                 <div>
-                  <div className="score-big">{contestant.judgeScore}/40</div>
-                  <div className="mini-text">{contestant.judgePercent}% normalized</div>
+                  <div className="score-big">{contestant.averageJudgeScore}/40</div>
+                  <div className="mini-text">{contestant.judgeScorePercent}% normalized</div>
                 </div>
 
                 <div>
@@ -871,8 +863,18 @@ function FinalLeaderboardDashboard() {
                 </div>
 
                 <div>
-                  <span className={`status ${contestant.status.toLowerCase()}`}>
-                    {contestant.status}
+                  <span style={{ 
+                    display: 'inline-flex',
+                    justifyContent: 'center',
+                    padding: '8px 12px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(59,130,246,0.15)',
+                    color: '#bfdbfe'
+                  }}>
+                    #{index + 1}
                   </span>
                 </div>
               </div>
@@ -892,12 +894,12 @@ function FinalLeaderboardDashboard() {
 
           <div className="bar-chart">
             {voteBars.map((contestant) => (
-              <div className="bar-wrap" key={contestant.id}>
+              <div className="bar-wrap" key={contestant.contestantId}>
                 <div className="bar-value">{contestant.publicVotes}</div>
                 <div className="bar-track">
                   <div
                     className="bar"
-                    style={{ height: `${contestant.publicPercent}%` }}
+                    style={{ height: `${contestant.publicVotePercent}%` }}
                   ></div>
                 </div>
                 <div className="bar-label">{contestant.name.split(" ")[0]}</div>
@@ -921,12 +923,12 @@ function FinalLeaderboardDashboard() {
 
           <div className="bar-chart">
             {judgeBars.map((contestant) => (
-              <div className="bar-wrap" key={contestant.id}>
-                <div className="bar-value">{contestant.judgeScore}/40</div>
+              <div className="bar-wrap" key={contestant.contestantId}>
+                <div className="bar-value">{contestant.averageJudgeScore}/40</div>
                 <div className="bar-track">
                   <div
                     className="bar blue"
-                    style={{ height: `${contestant.judgePercent}%` }}
+                    style={{ height: `${contestant.judgeScorePercent}%` }}
                   ></div>
                 </div>
                 <div className="bar-label">{contestant.name.split(" ")[0]}</div>
@@ -952,7 +954,7 @@ function FinalLeaderboardDashboard() {
 
           <div className="trend-list">
             {rankedContestants.slice(0, 4).map((contestant) => (
-              <div className="trend-item" key={contestant.id}>
+              <div className="trend-item" key={contestant.contestantId}>
                 <div className="trend-top">
                   <div>
                     <div className="trend-name">{contestant.name}</div>
@@ -962,11 +964,12 @@ function FinalLeaderboardDashboard() {
                 </div>
 
                 <div className="sparkline">
-                  {contestant.trend.map((value, idx) => (
+                  {/* Generate simple sparkline from score data */}
+                  {[contestant.publicVotePercent, contestant.judgeScorePercent, contestant.weightedScore * 2.5, Math.round((contestant.publicVotes / 50)), Math.round((contestant.averageJudgeScore / 2))].map((value, idx) => (
                     <div
                       key={idx}
                       className="spark"
-                      style={{ height: `${value * 0.55}px` }}
+                      style={{ height: `${Math.min(value * 0.54, 54)}px` }}
                     ></div>
                   ))}
                 </div>

@@ -8,7 +8,7 @@ const Contestant = require('../models/Contestant');
 // @access  Private (Judge)
 exports.getJudgeProfile = async (req, res) => {
   try {
-    const judge = await User.findById(req.user._id).select('-otp -otpExpires');
+    const judge = await User.findById(req.userId).select('-otp -otpExpires');
     
     if (!judge) {
       return res.status(404).json({ message: 'Judge not found' });
@@ -46,14 +46,18 @@ exports.getContestantsForJudging = async (req, res) => {
   try {
     const { category, round, status } = req.query;
     
-    // Build filter object
-    const filter = { status: 'approved' };
+    // Build filter object - get all contestants regardless of status for judging
+    const filter = {};
     
     if (category) {
-      filter.talentType = category;
+      filter.category = category;
+    }
+    
+    if (round) {
+      filter.round = round;
     }
 
-    const contestants = await Contestant.find(filter).select('name talentType imageUrl description votes status');
+    const contestants = await Contestant.find(filter).select('name category round performanceTitle photo timeSlot status');
     
     if (!contestants || contestants.length === 0) {
       return res.status(200).json({
@@ -67,17 +71,19 @@ exports.getContestantsForJudging = async (req, res) => {
     const enrichedContestants = await Promise.all(
       contestants.map(async (contestant) => {
         const judgeScore = await JudgeScore.findOne({
-          judgeId: req.user._id,
+          judgeId: req.userId,
           contestantId: contestant._id,
         });
 
         return {
           id: contestant._id,
           name: contestant.name,
-          category: contestant.talentType,
-          photo: contestant.imageUrl,
-          description: contestant.description,
-          votes: contestant.votes,
+          category: contestant.category,
+          photo: contestant.photo,
+          description: contestant.performanceTitle,
+          round: contestant.round,
+          timeSlot: contestant.timeSlot,
+          status: contestant.status,
           hasBeenScored: !!judgeScore,
           scoreSubmitted: judgeScore ? judgeScore.createdAt : null,
         };
@@ -172,7 +178,7 @@ exports.submitJudgeScore = async (req, res) => {
     const { contestantId, creativity, presentation, skillLevel, audienceImpact, notes } = req.body;
 
     console.log('📨 Submitting Score Request:', {
-      judgeId: req.user?._id,
+      judgeId: req.userId,
       contestantId,
       creativity,
       presentation,
@@ -207,7 +213,7 @@ exports.submitJudgeScore = async (req, res) => {
 
     // Check if judge has already scored this contestant
     const existingScore = await JudgeScore.findOne({
-      judgeId: req.user._id,
+      judgeId: req.userId,
       contestantId,
     });
 
@@ -220,7 +226,7 @@ exports.submitJudgeScore = async (req, res) => {
     const totalScore = creativity + presentation + skillLevel + audienceImpact;
 
     const judgeScore = await JudgeScore.create({
-      judgeId: req.user._id,
+      judgeId: req.userId,
       contestantId,
       criteria: {
         creativity,
@@ -278,7 +284,7 @@ exports.updateJudgeScore = async (req, res) => {
     }
 
     // Verify judge is the one who submitted this score
-    if (judgeScore.judgeId.toString() !== req.user._id.toString()) {
+    if (judgeScore.judgeId.toString() !== req.userId.toString()) {
       return res.status(403).json({ message: 'Not authorized to update this score' });
     }
 
@@ -318,8 +324,9 @@ exports.updateJudgeScore = async (req, res) => {
 exports.getJudgeScoreboard = async (req, res) => {
   try {
     const { category } = req.query;
+    console.log('📊 getJudgeScoreboard called for judge:', req.userId, 'category:', category);
 
-    const matchStage = { judgeId: new mongoose.Types.ObjectId(req.user._id) };
+    const matchStage = { judgeId: new mongoose.Types.ObjectId(req.userId) };
 
     const scores = await JudgeScore.aggregate([
       { $match: matchStage },
@@ -332,7 +339,7 @@ exports.getJudgeScoreboard = async (req, res) => {
         },
       },
       { $unwind: '$contestant' },
-      ...(category ? [{ $match: { 'contestant.talentType': category } }] : []),
+      ...(category ? [{ $match: { 'contestant.category': category } }] : []),
       { $sort: { totalScore: -1 } },
       {
         $project: {
@@ -340,14 +347,16 @@ exports.getJudgeScoreboard = async (req, res) => {
           scoreId: '$_id',
           contestantId: '$contestantId',
           name: '$contestant.name',
-          category: '$contestant.talentType',
-          photo: '$contestant.imageUrl',
+          category: '$contestant.category',
+          photo: '$contestant.photo',
           totalScore: 1,
           criteria: 1,
           submittedAt: '$createdAt',
         },
       },
     ]);
+
+    console.log('✅ Judge scores found:', scores.length);
 
     res.status(200).json({
       success: true,
@@ -432,11 +441,11 @@ exports.getOverallScoreboard = async (req, res) => {
 exports.getJudgeProgress = async (req, res) => {
   try {
     const totalContestants = await Contestant.countDocuments({ status: 'approved' });
-    const scoredContestants = await JudgeScore.countDocuments({ judgeId: req.user._id });
+    const scoredContestants = await JudgeScore.countDocuments({ judgeId: req.userId });
     const pendingContestants = totalContestants - scoredContestants;
 
     const scoresByCategory = await JudgeScore.aggregate([
-      { $match: { judgeId: new mongoose.Types.ObjectId(req.user._id) } },
+      { $match: { judgeId: new mongoose.Types.ObjectId(req.userId) } },
       {
         $lookup: {
           from: 'contestants',
@@ -469,5 +478,174 @@ exports.getJudgeProgress = async (req, res) => {
   } catch (error) {
     console.error('Error fetching judge progress:', error);
     res.status(500).json({ message: 'Error fetching progress', error: error.message });
+  }
+};
+
+// @desc    Delete judge score (clear submitted score)
+// @route   DELETE /api/judges/scores/:scoreId
+// @access  Private (Judge)
+exports.deleteJudgeScore = async (req, res) => {
+  try {
+    const { scoreId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(scoreId)) {
+      return res.status(400).json({ message: 'Invalid score ID' });
+    }
+
+    const judgeScore = await JudgeScore.findById(scoreId);
+    if (!judgeScore) {
+      return res.status(404).json({ message: 'Score not found' });
+    }
+
+    // Verify judge is the one who submitted this score
+    if (judgeScore.judgeId.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this score' });
+    }
+
+    await JudgeScore.findByIdAndDelete(scoreId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Score deleted successfully',
+      data: {
+        deletedScoreId: scoreId,
+        contestantId: judgeScore.contestantId,
+      },
+    });
+  } catch (error) {
+    console.error('Error deleting judge score:', error);
+    res.status(500).json({ message: 'Error deleting score', error: error.message });
+  }
+};
+
+// @desc    Get combined final leaderboard (judge scores + public votes)
+// @route   GET /api/judges/final-leaderboard
+// @access  Public
+exports.getFinalLeaderboard = async (req, res) => {
+  try {
+    const { category } = req.query;
+    console.log('📊 getFinalLeaderboard called with category:', category);
+
+    // Stage 1: Aggregate judge scores
+    const judgeScorePipeline = [
+      {
+        $group: {
+          _id: '$contestantId',
+          averageJudgeScore: { $avg: '$totalScore' },
+          judgeCount: { $sum: 1 },
+          averageCreativity: { $avg: '$criteria.creativity' },
+          averagePresentation: { $avg: '$criteria.presentation' },
+          averageSkillLevel: { $avg: '$criteria.skillLevel' },
+          averageAudienceImpact: { $avg: '$criteria.audienceImpact' },
+        },
+      },
+    ];
+
+    const judgeScores = await JudgeScore.aggregate(judgeScorePipeline);
+    console.log('✅ Judge scores fetched:', judgeScores.length, 'records');
+
+    // Stage 2: Create a map for quick lookup
+    const judgeScoreMap = {};
+    judgeScores.forEach(score => {
+      judgeScoreMap[score._id.toString()] = {
+        averageJudgeScore: Math.round(score.averageJudgeScore * 100) / 100,
+        judgeCount: score.judgeCount,
+        criteria: {
+          creativity: Math.round(score.averageCreativity * 100) / 100,
+          presentation: Math.round(score.averagePresentation * 100) / 100,
+          skillLevel: Math.round(score.averageSkillLevel * 100) / 100,
+          audienceImpact: Math.round(score.averageAudienceImpact * 100) / 100,
+        },
+      };
+    });
+
+    // Stage 3: Fetch contestants
+    const matchStage = {};
+    if (category) {
+      matchStage.category = category;
+    }
+
+    const contestants = await Contestant.find(matchStage).select(
+      'name category photo performanceTitle round timeSlot'
+    );
+    console.log('✅ Contestants fetched:', contestants.length, 'records', 'with category filter:', category || 'none');
+
+    // Stage 4: Combine data and calculate weighted scores
+    const leaderboardData = contestants.map(contestant => {
+      const judgeScoreData = judgeScoreMap[contestant._id.toString()] || {
+        averageJudgeScore: 0,
+        judgeCount: 0,
+        criteria: {
+          creativity: 0,
+          presentation: 0,
+          skillLevel: 0,
+          audienceImpact: 0,
+        },
+      };
+
+      // Max possible scores (4 criteria × 25 points each)
+      const maxJudgeScore = 100;
+
+      // Calculate percentages (based only on judge scores since public voting not integrated yet)
+      const judgeScorePercent = (judgeScoreData.averageJudgeScore / maxJudgeScore) * 100;
+
+      // Weighted score (100% judge scores for now)
+      const weightedScore = Number(judgeScorePercent.toFixed(2));
+
+      return {
+        id: contestant._id,
+        contestantId: contestant._id.toString(),
+        name: contestant.name,
+        category: contestant.category,
+        photo: contestant.photo,
+        performanceTitle: contestant.performanceTitle,
+        round: contestant.round,
+        timeSlot: contestant.timeSlot,
+        averageJudgeScore: judgeScoreData.averageJudgeScore,
+        maxJudgeScore,
+        judgeCount: judgeScoreData.judgeCount,
+        judgeScorePercent: Math.round(judgeScorePercent),
+        criteria: judgeScoreData.criteria,
+        weightedScore,
+      };
+    });
+
+    // Stage 5: Sort by weighted score
+    const rankedLeaderboard = leaderboardData.sort(
+      (a, b) => b.weightedScore - a.weightedScore
+    );
+
+    // Calculate summary stats
+    const totalJudgeScores = rankedLeaderboard.reduce((sum, c) => sum + c.averageJudgeScore, 0);
+    const avgJudgeScore =
+      rankedLeaderboard.length > 0
+        ? (totalJudgeScores / rankedLeaderboard.length).toFixed(2)
+        : 0;
+
+    // Get top 3
+    const topThree = rankedLeaderboard.slice(0, 3);
+
+    console.log('📤 Sending final leaderboard response with', rankedLeaderboard.length, 'contestants');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        leaderboard: rankedLeaderboard,
+        topThree,
+        statistics: {
+          totalContestants: rankedLeaderboard.length,
+          averageJudgeScore: parseFloat(avgJudgeScore),
+          highestJudgeScore: rankedLeaderboard.length > 0 ? rankedLeaderboard[0].averageJudgeScore : 0,
+          highestWeightedScore: rankedLeaderboard.length > 0 ? rankedLeaderboard[0].weightedScore : 0,
+        },
+      },
+      count: rankedLeaderboard.length,
+    });
+  } catch (error) {
+    console.error('Error fetching final leaderboard:', error);
+    res.status(500).json({
+      message: 'Error fetching final leaderboard',
+      error: error.message,
+    });
   }
 };

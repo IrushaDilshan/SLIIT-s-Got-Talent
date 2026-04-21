@@ -179,23 +179,6 @@ export default function FinalResult() {
   }) : [];
 
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh', 
-        background: '#07080f', 
-        color: '#f1f5f9',
-        fontFamily: "'Syne', sans-serif"
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🔄</div>
-          <div>Loading final results...</div>
-        </div>
-      </div>
-    );
-  }
 
   const handlePrint = () => {
     setPrinting(true);
@@ -420,8 +403,8 @@ export default function FinalResult() {
                 <div
                   className="donut"
                   style={{
-                    background: "conic-gradient(" + pieSegments.map((s) =>
-                      s.color + " " + s.start + "% " + (s.start + s.percent) + "%").join(", ") + ")",
+                    background: `conic-gradient(${pieSegments.map((s) =>
+                      `${s.color} ${s.start}% ${s.start + s.percent}%`).join(", ")})`,
                   }}
                 >
                   <div className="donut-hole">Vote<br />Share</div>
@@ -596,8 +579,69 @@ export default function FinalResult() {
                 {ranked.length} contestants · Generated {reportDate}
               </div>
             </div>
+
+            <div className="t-head">
+              <div>Rank</div>
+              <div>Contestant</div>
+              <div>Public Votes</div>
+              <div>Judge Score</div>
+              <div>Final Score</div>
+              <div>Category</div>
+              <div>Progress</div>
+            </div>
+
+            {ranked.map((c, i) => (
+              <div
+                className={`t-row ${i === 0 ? "top1" : i === 1 ? "top2" : i === 2 ? "top3" : ""}`}
+                key={c.contestantId}
+              >
+                <div>
+                  <div className="rank-num" style={i < 3 ? { color: RANK_COLORS[i], borderColor: RANK_COLORS[i] + "44" } : {}}>
+                    {i < 3 ? MEDAL[i] : i + 1}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="c-name">{c.name}</div>
+                  <div className="c-sub">Public {c.publicPercent}% · Judge {c.judgePercent}%</div>
+                </div>
+
+                <div>
+                  <div className="score-big">{c.publicVotes}</div>
+                  <div className="score-sub">/ {c.maxVotes} votes</div>
+                </div>
+
+                <div>
+                  <div className="score-big">{c.averageJudgeScore}</div>
+                  <div className="score-sub">/ {c.maxJudgeScore} pts</div>
+                </div>
+
+                <div>
+                  <div className="score-big" style={{ color: c.color }}>{c.weightedScore}</div>
+                  <div className="score-sub">weighted final</div>
+                </div>
+
+                <div>
+                  <span className="cat-badge">{c.category}</span>
+                </div>
+
+                <div className="progress-cell">
+                  <div className="progress-labels">
+                    <span>0</span>
+                    <span>{c.weightedScore}%</span>
+                  </div>
+                  <div className="progress-track">
+                    <div className="progress-fill" style={{ width: `${c.weightedScore}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 14, background: "rgba(232,121,249,0.05)", border: "1px solid rgba(232,121,249,0.12)", fontSize: 12, color: "#94a3b8", lineHeight: 1.8 }}>
+              <strong style={{ color: "#f1f5f9" }}>Scoring Methodology:</strong> Final weighted score = (Public Votes / Max Votes × 100) × 0.40 + (Judge Score / Max Judge Score × 100) × 0.60. All scores are normalized to a 100-point scale for fair comparison across categories.
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

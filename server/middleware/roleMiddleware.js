@@ -4,6 +4,32 @@
  */
 
 /**
+ * Generic authorization middleware
+ * Allows multiple roles to be specified
+ * @param {...string} allowedRoles - Roles that are permitted to access the resource
+ * @returns {function} Express middleware function
+ */
+const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.userRole) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    if (!allowedRoles.includes(req.userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Only users with role(s) ${allowedRoles.join(', ')} can access this resource.`,
+      });
+    }
+
+    next();
+  };
+};
+
+/**
  * Verify user is a judge or admin
  * Must be called AFTER authMiddleware
  * @param {object} req - Express request object
@@ -41,6 +67,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 module.exports = {
+  authorize,
   requireJudge,
   requireAdmin,
 };

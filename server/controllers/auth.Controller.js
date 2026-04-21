@@ -5,6 +5,7 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
 /**
  * Generate JWT token for user
@@ -21,30 +22,39 @@ const generateToken = (userId, role) => {
 };
 
 /**
- * Judge Login
+ * Generate random 6-digit OTP
+ * @returns {string} 6-digit OTP
+ */
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * Judge Login with OTP
  * POST /api/auth/login
+ * Expects only email - generates and sends OTP
  * @param {object} req - Express request
  * @param {object} res - Express response
  */
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email } = req.body;
 
-    // Validation: Check email and password are provided
-    if (!email || !password) {
+    // Validation: Check email is provided
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password.',
+        message: 'Please provide email.',
       });
     }
 
-    // Find user by email (must explicitly select password field since it's hidden by default)
-    const user = await User.findOne({ email }).select('+password');
+    // Find user by email
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Email not registered. Please contact an administrator.',
       });
     }
 
@@ -56,20 +66,102 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Compare passwords using model method
-    const isPasswordCorrect = await user.matchPassword(password);
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
 
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
+    // Update OTP fields directly (avoid full schema validation)
+    await User.updateOne(
+      { _id: user._id },
+      { otp, otpExpires }
+    );
+
+    // In development, log OTP to console
+    console.log(`📧 OTP for ${email}: ${otp}`);
+
+    // Send OTP via email
+    try {
+      await sendEmail({
+        email: email,
+        subject: 'Your SLIIT Got Talent OTP Code',
+        message: `Your One-Time Password (OTP) is: ${otp}\n\nThis OTP is valid for 10 minutes. Do not share this code with anyone.\n\nIf you didn't request this, please ignore this email.\n\n- SLIIT's Got Talent Voting Team`,
+      });
+      console.log(`✅ OTP email sent to ${email}`);
+    } catch (emailError) {
+      console.error(`⚠️  Failed to send email to ${email}:`, emailError.message);
+      // Don't fail the login flow if email fails - still allow OTP entry
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email. Please check your inbox or spam folder.',
+      // NOTE: For development only - remove in production
+      devOTP: otp,
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    console.error('   Stack:', error.stack);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during login.',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+/**
+ * Verify OTP and issue token
+ * POST /api/auth/verify
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ */
+exports.verify = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validation
+    if (!email || !otp) {
+      return res.status(400).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Please provide email and OTP.',
       });
     }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    // Check if OTP exists and matches
+    if (!user.otp || user.otp !== otp) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid OTP.',
+      });
+    }
+
+    // Check if OTP has expired
+    if (new Date() > user.otpExpires) {
+      return res.status(401).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.',
+      });
+    }
+
+    // Clear OTP after successful verification (avoid full schema validation)
+    await User.updateOne(
+      { _id: user._id },
+      { otp: null, otpExpires: null }
+    );
 
     // Generate token
     const token = generateToken(user._id, user.role);
 
-    // Send response with token
     return res.status(200).json({
       success: true,
       message: 'Login successful.',
@@ -84,11 +176,12 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Verify error:', error);
+    console.error('   Stack:', error.stack);
     return res.status(500).json({
       success: false,
-      message: 'An error occurred during login.',
-      error: error.message,
+      message: 'An error occurred during verification.',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
     });
   }
 };

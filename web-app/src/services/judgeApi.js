@@ -54,8 +54,8 @@ export const judgeApi = {
    */
   getContestantScores: async (contestantId) => {
     try {
-      const response = await apiClient.get(`/judges/scores/${contestantId}`);
-      return response.data;
+      const response = await api.get({ path: `/judges/scores/${contestantId}` });
+      return response;
     } catch (error) {
       console.error(`Error fetching scores for contestant ${contestantId}:`, error);
       throw error.response?.data || error;
@@ -126,17 +126,34 @@ export const judgeApi = {
   },
 
   /**
+   * Delete a submitted score
+   * @param {string} scoreId - MongoDB ID of the score to delete
+   * @param {string} token - Authentication token
+   * @returns {Promise} Deletion confirmation
+   */
+  deleteScore: async (scoreId, token) => {
+    try {
+      const response = await api.del({ path: `/judges/scores/${scoreId}`, token });
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting score ${scoreId}:`, error);
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
    * Get judge's personal scoreboard (their scores ranked)
    * @param {Object} params - Query parameters
    * @param {string} [params.category] - Filter by talent category
+   * @param {string} token - Authentication token
    * @returns {Promise} Array of contestants ranked by judge's scores
    */
-  getScoreboard: async (params = {}) => {
+  getScoreboard: async (params = {}, token) => {
     try {
       const queryString = new URLSearchParams(params).toString();
       const url = `/judges/scoreboard${queryString ? '?' + queryString : ''}`;
-      const response = await apiClient.get(url);
-      return response.data;
+      const response = await api.get({ path: url, token });
+      return response.data || response;
     } catch (error) {
       console.error('Error fetching judge scoreboard:', error);
       throw error.response?.data || error;
@@ -154,8 +171,8 @@ export const judgeApi = {
     try {
       const queryString = new URLSearchParams(params).toString();
       const url = `/judges/overall-scoreboard${queryString ? '?' + queryString : ''}`;
-      const response = await apiClient.get(url);
-      return response.data;
+      const response = await api.get({ path: url });
+      return response;
     } catch (error) {
       console.error('Error fetching overall scoreboard:', error);
       throw error.response?.data || error;
@@ -168,8 +185,8 @@ export const judgeApi = {
    */
   getProgress: async () => {
     try {
-      const response = await apiClient.get('/judges/progress');
-      return response.data;
+      const response = await api.get({ path: '/judges/progress' });
+      return response;
     } catch (error) {
       console.error('Error fetching judge progress:', error);
       throw error.response?.data || error;
@@ -197,6 +214,43 @@ export const judgeApi = {
     if (!criteria) return '0/100';
     const total = criteria.creativity + criteria.presentation + criteria.skillLevel + criteria.audienceImpact;
     return `${total}/100`;
+  },
+
+  /**
+   * Get final leaderboard with combined judge scores and public votes
+   * This endpoint aggregates:
+   * - Judge scores (averaged across all judges)
+   * - Public votes (from contestant model)
+   * - Weighted scoring (40% public + 60% judge)
+   * 
+   * @param {Object} [params={}] - Query parameters
+   * @param {string} [params.category] - Filter by talent category
+   * @returns {Promise} Complete leaderboard data with rankings
+   * 
+   * @example
+   * const { leaderboard, topThree, statistics } = await judgeApi.getFinalLeaderboard();
+   * const categoryResults = await judgeApi.getFinalLeaderboard({ category: 'Singing' });
+   */
+  getFinalLeaderboard: async (params = {}) => {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const url = `/judges/final-leaderboard${queryString ? '?' + queryString : ''}`;
+      console.log('🔄 getFinalLeaderboard calling:', url);
+      const response = await api.get({ path: url });
+      
+      console.log('✅ getFinalLeaderboard raw response type:', typeof response);
+      console.log('✅ getFinalLeaderboard has data property:', !!response?.data);
+      console.log('✅ getFinalLeaderboard has leaderboard in data:', !!response?.data?.leaderboard);
+      
+      if (response && response.data && response.data.leaderboard) {
+        console.log('✅ getFinalLeaderboard returning data.leaderboard with', response.data.leaderboard.length, 'items');
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Error fetching final leaderboard:', error);
+      throw error.response?.data || error;
+    }
   },
 };
 

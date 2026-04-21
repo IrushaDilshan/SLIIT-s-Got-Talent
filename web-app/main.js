@@ -496,7 +496,7 @@ window.adminAction = async (id, status) => {
 window.adminDelete = async (id) => {
     if(!confirm('Delete?')) return;
     try {
-        await api.delete(`/contestants/${id}`);
+        await api.del(`/contestants/${id}`);
         const updated = state.adminContestants.filter(c => c._id !== id);
         setState({ adminContestants: updated });
     } catch(e) { console.error(e); }
