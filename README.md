@@ -1,5 +1,7 @@
 # SLIIT's Got Talent - Project Structure
 
+![Votify SLIIT - Smart Talent Voting and Analytics System](assets/votify-sliit-overview.png)
+
 This repository contains the source code for the "SLIIT's Got Talent" voting system. The project is divided into four main components, each handled by a dedicated member.
 
 ## Project Organization
